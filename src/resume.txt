@@ -1,0 +1,35 @@
+Yasaswini Dharmavarapu
+M.Sc. Artificial Intelligence, BTU Cottbus (2025-2027)
+B.Tech Computer Science, Amrita School of Computing (2020-2024), CGPA: 7.2/10
+Based in Cottbus, Germany. Available 20 hrs/week as Werkstudent.
+
+SKILLS:
+Python, SQL, C, JavaScript, scikit-learn, Pandas, NumPy, Matplotlib, Seaborn,
+TensorFlow, Keras, PyTorch, CNN, LSTM, Transformer architectures,
+BERT, DistilBERT, XLM-RoBERTa, Hugging Face Transformers, RAG, NER, CRF,
+LangGraph, LangChain, Groq API, FAISS, FastAPI, Docker,
+HuBERT, HiFi-GAN, OpenCV, Git, GitHub, Linux, REST APIs
+
+EXPERIENCE:
+- Academic Research Assistant, BTU Cottbus (Feb 2026 - Ongoing)
+  PyTorch pipeline for music synthesis and audio pattern recognition
+  Automated MFCC and spectrogram feature extraction using Librosa
+  Reduced data preparation time by 50%
+
+- Machine Learning Intern, Fractal Analytics (June 2023 - Aug 2023)
+  Fine-tuned BERT on 500+ employee feedback records, 95%+ accuracy
+  Automated preprocessing pipeline, reduced manual work by 65%
+
+PUBLICATION:
+Bilingual Speech Translation Between Tamil and Telugu (AIST-2024, Springer)
+DOI: 10.1007/978-3-031-91331-0_8
+
+PROJECTS:
+1. AI Career Copilot - LangGraph, Groq, RAG, FAISS, FastAPI, Docker, multi-agent job discovery
+2. Job Email Classification - XLM-RoBERTa, AUC 0.95, CNN vs transformer, 8 F1 points improvement
+3. Multilingual Speech Translation - HuBERT, HiFi-GAN, ASR+MT+TTS pipeline, AIST-2024 basis
+4. Driver Drowsiness Detection - CNN, OpenCV, 99%+ accuracy, 2s alert response
+5. Aspect-Based Sentiment Analysis - BERT/DistilBERT/CRF, F1 improved by 6 points
+
+LANGUAGES:
+English C1, German A2 (B1 course ongoing), Telugu Native, Tamil Professional
