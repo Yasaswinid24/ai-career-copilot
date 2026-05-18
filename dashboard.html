@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Career Copilot — Dashboard</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; color: #1a1a1a; min-height: 100vh; }
+header { background: #1a1a1a; color: white; padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; }
+header h1 { font-size: 18px; font-weight: 500; }
+header span { font-size: 13px; color: #888; }
+.stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; padding: 24px 32px 0; }
+.stat { background: white; border-radius: 10px; padding: 16px 20px; border: 1px solid #e8e8e8; }
+.stat-label { font-size: 12px; color: #888; margin-bottom: 6px; }
+.stat-value { font-size: 28px; font-weight: 600; }
+.stat-value.green { color: #16a34a; } .stat-value.amber { color: #d97706; } .stat-value.blue { color: #2563eb; } .stat-value.dark { color: #1a1a1a; }
+.controls { display: flex; gap: 12px; padding: 20px 32px; align-items: center; flex-wrap: wrap; }
+.controls input { flex: 1; min-width: 200px; padding: 9px 14px; border: 1px solid #e8e8e8; border-radius: 8px; font-size: 14px; background: white; outline: none; }
+.controls input:focus { border-color: #1a1a1a; }
+.filter-btn { padding: 8px 16px; border-radius: 8px; border: 1px solid #e8e8e8; background: white; font-size: 13px; cursor: pointer; transition: all 0.15s; color: #1a1a1a; }
+.filter-btn.active { background: #1a1a1a; color: white; border-color: #1a1a1a; }
+.filter-btn:hover:not(.active) { background: #f5f5f0; }
+.job-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(340px,1fr)); gap: 16px; padding: 0 32px 32px; }
+.job-card { background: white; border-radius: 12px; border: 1px solid #e8e8e8; padding: 20px; transition: box-shadow 0.2s; }
+.job-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+.job-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 12px; }
+.job-title { font-size: 14px; font-weight: 600; color: #1a1a1a; line-height: 1.4; flex: 1; }
+.score-badge { font-size: 15px; font-weight: 700; min-width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.score-high { background: #dcfce7; color: #15803d; } .score-mid { background: #fef9c3; color: #854d0e; } .score-low { background: #fee2e2; color: #b91c1c; }
+.company { font-size: 13px; color: #555; margin-bottom: 4px; }
+.location { font-size: 12px; color: #888; margin-bottom: 12px; }
+.verdict { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+.verdict-apply { background: #dcfce7; color: #15803d; } .verdict-worth { background: #fef9c3; color: #854d0e; } .verdict-skip { background: #fee2e2; color: #b91c1c; }
+.reason { font-size: 12px; color: #666; line-height: 1.5; margin-bottom: 12px; padding: 10px; background: #f9f9f7; border-radius: 8px; }
+.skills-row { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+.skill-tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+.skill-match { background: #e0f2fe; color: #0369a1; } .skill-missing { background: #fce7f3; color: #9d174d; }
+.job-link { display: block; margin-top: 12px; font-size: 12px; color: #2563eb; text-decoration: none; font-weight: 500; }
+.job-link:hover { text-decoration: underline; }
+.no-results { grid-column: 1/-1; text-align: center; padding: 60px; color: #888; font-size: 14px; }
+.count-label { font-size: 13px; color: #888; padding: 0 32px 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>AI Career Copilot — Job Dashboard</h1>
+  <span id="last-updated">Loading...</span>
+</header>
+<div class="stats">
+  <div class="stat"><div class="stat-label">Total jobs evaluated</div><div class="stat-value dark" id="stat-total">—</div></div>
+  <div class="stat"><div class="stat-label">Apply Now</div><div class="stat-value green" id="stat-apply">—</div></div>
+  <div class="stat"><div class="stat-label">Worth Considering</div><div class="stat-value amber" id="stat-worth">—</div></div>
+  <div class="stat"><div class="stat-label">Average match score</div><div class="stat-value blue" id="stat-avg">—</div></div>
+</div>
+<div class="controls">
+  <input type="text" id="search" placeholder="Search by title or company..." oninput="render()">
+  <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+  <button class="filter-btn" onclick="setFilter('Apply Now',this)">Apply Now</button>
+  <button class="filter-btn" onclick="setFilter('Worth Considering',this)">Worth Considering</button>
+  <button class="filter-btn" onclick="setFilter('Skip',this)">Skip</button>
+</div>
+<div class="count-label" id="count-label"></div>
+<div class="job-grid" id="grid"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script>
+let allJobs=[], activeFilter='all';
+fetch('matched_jobs.csv').then(r=>r.text()).then(csv=>{
+  const result=Papa.parse(csv,{header:true,skipEmptyLines:true});
+  allJobs=result.data.filter(j=>j.match_score&&j.verdict!=='Error'&&j.verdict!=='API Error').sort((a,b)=>Number(b.match_score)-Number(a.match_score));
+  updateStats(); render();
+  const dates=allJobs.map(j=>j.scraped_at).filter(Boolean);
+  if(dates.length) document.getElementById('last-updated').textContent='Scraped: '+dates[0];
+}).catch(()=>{ document.getElementById('grid').innerHTML='<div class="no-results">Could not load matched_jobs.csv — make sure you started the Python server.</div>'; });
+function updateStats(){
+  document.getElementById('stat-total').textContent=allJobs.length;
+  document.getElementById('stat-apply').textContent=allJobs.filter(j=>j.verdict==='Apply Now').length;
+  document.getElementById('stat-worth').textContent=allJobs.filter(j=>j.verdict==='Worth Considering').length;
+  const avg=allJobs.reduce((s,j)=>s+Number(j.match_score),0)/allJobs.length;
+  document.getElementById('stat-avg').textContent=Math.round(avg)+'%';
+}
+function setFilter(f,btn){ activeFilter=f; document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); render(); }
+function render(){
+  const q=document.getElementById('search').value.toLowerCase();
+  let jobs=allJobs;
+  if(activeFilter!=='all') jobs=jobs.filter(j=>j.verdict===activeFilter);
+  if(q) jobs=jobs.filter(j=>(j.title||'').toLowerCase().includes(q)||(j.company||'').toLowerCase().includes(q)||(j.location||'').toLowerCase().includes(q));
+  document.getElementById('count-label').textContent=jobs.length+' jobs shown';
+  if(!jobs.length){ document.getElementById('grid').innerHTML='<div class="no-results">No jobs match your filter.</div>'; return; }
+  document.getElementById('grid').innerHTML=jobs.map(job=>{
+    const score=Number(job.match_score);
+    const sc=score>=80?'score-high':score>=60?'score-mid':'score-low';
+    const vc=job.verdict==='Apply Now'?'verdict-apply':job.verdict==='Worth Considering'?'verdict-worth':'verdict-skip';
+    const matched=(job.matched_skills||'').split(',').map(s=>s.trim()).filter(Boolean);
+    const missing=(job.missing_skills||'').split(',').map(s=>s.trim()).filter(Boolean);
+    const mt=matched.slice(0,4).map(s=>`<span class="skill-tag skill-match">${s}</span>`).join('');
+    const ms=missing.slice(0,3).map(s=>`<span class="skill-tag skill-missing">${s}</span>`).join('');
+    const lk=job.link&&job.link!=='N/A'?`<a class="job-link" href="${job.link}" target="_blank">View on Arbeitsagentur →</a>`:'';
+    return `<div class="job-card"><div class="job-card-top"><div class="job-title">${job.title||'Unknown'}</div><div class="score-badge ${sc}">${score}</div></div><div class="company">${job.company||'—'}</div><div class="location">${job.location||'—'}</div><span class="verdict ${vc}">${job.verdict}</span><div class="reason">${job.reason||''}</div>${mt?`<div class="skills-row">${mt}</div>`:''}${ms?`<div class="skills-row">${ms}</div>`:''}${lk}</div>`;
+  }).join('');
+}
+</script>
+</body>
+</html>
