@@ -266,5 +266,15 @@ def get_followups():
         return []
 
 
-# Serve dashboard
-app.mount("/", StaticFiles(directory=".", html=True), name="static")
+
+
+# ── Serve dashboard ───────────────────────────────────────────────────────────
+from fastapi.responses import FileResponse
+
+@app.get("/")
+def serve_root():
+    return FileResponse("dashboard.html")
+
+@app.get("/dashboard.html")
+def serve_dashboard():
+    return FileResponse("dashboard.html")
