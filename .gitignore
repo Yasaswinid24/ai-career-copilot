@@ -1,8 +1,9 @@
 .env
-jobs.csv
-matched_jobs.csv
 outreach_drafts.txt
 thesis_roles.csv
-applications.csv
+src/__pycache__/
+*.pyc
+outreach_drafts.txt
+thesis_roles.csv
 src/__pycache__/
 *.pyc
