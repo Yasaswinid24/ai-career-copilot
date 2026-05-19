@@ -23,10 +23,19 @@ sys.path.append(os.path.dirname(__file__))
 from recruiter_finder import find_recruiter
 
 load_dotenv()
+
+# Import auth
+from src.auth import (init_db, get_current_user, get_user_applications,
+                      add_application, update_cv, router as auth_router)
+
+# Init database
+init_db()
+
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 MODEL  = "llama-3.1-8b-instant"
 
 app = FastAPI()
+app.include_router(auth_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -105,7 +114,11 @@ def get_jobs():
 
 
 @app.get("/api/tracker")
-def get_tracker():
+def get_tracker(request: Request):
+    user = get_current_user(request)
+    if user:
+        return get_user_applications(user["id"])
+    # Fallback to CSV for backward compatibility
     df = load_tracker()
     return df.fillna("").to_dict(orient="records")
 
@@ -278,3 +291,11 @@ def serve_root():
 @app.get("/dashboard.html")
 def serve_dashboard():
     return FileResponse("dashboard.html")
+
+@app.post("/api/cv")
+async def upload_cv(req: dict, request: Request):
+    user = get_current_user(request)
+    if not user:
+        return {"error": "Not logged in"}
+    update_cv(user["id"], req.get("cv_text",""))
+    return {"status": "saved"}

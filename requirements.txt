@@ -7,3 +7,9 @@ numpy
 requests==2.31.0
 beautifulsoup4==4.12.3
 hunter
+sqlalchemy
+python-jose[cryptography]
+python-multipart
+aiofiles
+httpx
+authlib
