@@ -1,66 +1,87 @@
 """
 AI Career Copilot — Job Discovery Agent
-Uses Bundesagentur für Arbeit (Germany's official job portal)
-No registration or API key signup needed.
+-----------------------------------------
+Targets Werkstudent and Praktikum roles specifically.
+Full-time roles are deprioritised.
 """
 
 import requests
 import pandas as pd
+import urllib3
 from datetime import datetime
+
+urllib3.disable_warnings()
 
 HEADERS = {
     "X-API-Key": "jobboerse-jobsuche",
     "User-Agent": "Jobsuche/2.9.2 (de.arbeitsagentur.jobboerse; build:1077; iOS 15.1.0) Alamofire/5.4.4",
 }
 
+BASE_URL = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/app/jobs"
+
+# ── Job type priorities ───────────────────────────────────────────────────────
+JOB_TYPES = [
+    {"angebotsart": 34, "label": "Werkstudent",  "priority": 1},
+    {"angebotsart": 4,  "label": "Praktikum",    "priority": 2},
+    {"angebotsart": 1,  "label": "Full-time",    "priority": 3},
+]
+
+# ── Search queries focused on AI/ML ──────────────────────────────────────────
 SEARCH_QUERIES = [
-    "Artificial Intelligence",
     "Machine Learning",
+    "Artificial Intelligence",
     "Deep Learning",
+    "Natural Language Processing",
     "Data Science",
+    "Computer Vision",
     "AI Engineer",
 ]
 
 OUTPUT_FILE = "jobs.csv"
-BASE_URL = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/app/jobs"
 
 
-def search_jobs(keyword, page=1, size=25):
+def search_jobs(keyword, angebotsart, label, page=1, size=25):
     params = {
-        "was": keyword,        # job title keyword
-        "wo": "Deutschland",   # location
-        "page": page,
-        "size": size,
-        "angebotsart": 1,      # 1=jobs, 4=internships, 34=working student
+        "was":          keyword,
+        "wo":           "Deutschland",
+        "page":         page,
+        "size":         size,
+        "angebotsart":  angebotsart,
     }
     try:
-        response = requests.get(BASE_URL, headers=HEADERS, params=params, timeout=10, verify=False)
-        if response.status_code == 200:
-            return response.json()
+        r = requests.get(
+            BASE_URL, headers=HEADERS,
+            params=params, timeout=10, verify=False
+        )
+        if r.status_code == 200:
+            return r.json()
         else:
-            print(f"  Error {response.status_code} for '{keyword}'")
+            print(f"  Error {r.status_code}")
             return None
     except Exception as e:
         print(f"  Request failed: {e}")
         return None
 
 
-def parse_results(data, query):
+def parse_results(data, query, label, priority):
     jobs = []
     if not data or "stellenangebote" not in data:
         return jobs
+
     for job in data["stellenangebote"]:
         jobs.append({
-            "title": job.get("titel", "N/A"),
-            "company": job.get("arbeitgeber", "N/A"),
-            "location": job.get("arbeitsort", {}).get("ort", "N/A"),
-            "region": job.get("arbeitsort", {}).get("region", "N/A"),
-            "job_type": job.get("angebotsart", "N/A"),
-            "published": job.get("eintrittsdatum", "N/A"),
-            "ref_number": job.get("refnr", "N/A"),
-            "link": f"https://www.arbeitsagentur.de/jobsuche/jobdetail/{job.get('refnr', '')}",
+            "title":        job.get("titel", "N/A"),
+            "company":      job.get("arbeitgeber", "N/A"),
+            "location":     job.get("arbeitsort", {}).get("ort", "N/A"),
+            "region":       job.get("arbeitsort", {}).get("region", "N/A"),
+            "job_type":     label,
+            "priority":     priority,
+            "published":    job.get("aktuelleVeroeffentlichungsdatum", "N/A"),
+            "start_date":   job.get("eintrittsdatum", "N/A"),
+            "ref_number":   job.get("refnr", "N/A"),
+            "link":         f"https://www.arbeitsagentur.de/jobsuche/jobdetail/{job.get('refnr','')}",
             "search_query": query,
-            "scraped_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "scraped_at":   datetime.now().strftime("%Y-%m-%d %H:%M"),
         })
     return jobs
 
@@ -68,44 +89,57 @@ def parse_results(data, query):
 def main():
     print("=" * 55)
     print("  AI Career Copilot — Job Discovery Agent")
-    print("  Source: Bundesagentur für Arbeit (Official)")
+    print("  Targeting: Werkstudent > Praktikum > Full-time")
     print("=" * 55)
-
-    import urllib3
-    urllib3.disable_warnings()  # suppress SSL warnings cleanly
 
     all_jobs = []
 
-    for query in SEARCH_QUERIES:
-        print(f"\nSearching: '{query}'...")
-        data = search_jobs(query)
-        if data:
-            total = data.get("maxErgebnisse", 0)
-            print(f"  Total available: {total}")
-            jobs = parse_results(data, query)
-            print(f"  Fetched: {len(jobs)} jobs")
-            all_jobs.extend(jobs)
-        else:
-            print(f"  No results returned.")
+    for job_type in JOB_TYPES:
+        label       = job_type["label"]
+        angebotsart = job_type["angebotsart"]
+        priority    = job_type["priority"]
 
-    # Remove duplicates by reference number
-    seen = set()
+        print(f"\n── {label} roles ──────────────────────────")
+
+        for query in SEARCH_QUERIES:
+            print(f"  Searching: '{query}'...")
+            data = search_jobs(query, angebotsart, label)
+            if data:
+                total = data.get("maxErgebnisse", 0)
+                jobs  = parse_results(data, query, label, priority)
+                print(f"  Found {len(jobs)} / {total} available")
+                all_jobs.extend(jobs)
+
+    # Remove duplicates by ref number
+    seen   = set()
     unique = []
     for job in all_jobs:
         if job["ref_number"] not in seen:
             seen.add(job["ref_number"])
             unique.append(job)
 
-    print(f"\nTotal unique jobs found: {len(unique)}")
+    # Sort — Werkstudent first, then Praktikum, then Full-time
+    df = pd.DataFrame(unique)
+    df = df.sort_values(["priority", "title"])
 
-    if unique:
-        df = pd.DataFrame(unique)
-        df.to_csv(OUTPUT_FILE, index=False)
-        print(f"Saved to {OUTPUT_FILE}")
-        print("\nPreview:")
-        print(df[["title", "company", "location"]].head(10).to_string())
-    else:
-        print("No jobs found.")
+    df.to_csv(OUTPUT_FILE, index=False)
+
+    print(f"\n{'='*55}")
+    print(f"Total unique jobs: {len(df)}")
+    print(f"\nBreakdown:")
+    for label in ["Werkstudent", "Praktikum", "Full-time"]:
+        count = len(df[df["job_type"] == label])
+        bar   = "█" * (count // 2)
+        print(f"  {label:<12} {bar} {count}")
+
+    print(f"\nTop Werkstudent roles:")
+    ws = df[df["job_type"] == "Werkstudent"].head(5)
+    print(ws[["title","company","location"]].to_string(index=False))
+
+    print(f"\nTop Praktikum roles:")
+    pk = df[df["job_type"] == "Praktikum"].head(5)
+    print(pk[["title","company","location"]].to_string(index=False))
+
 
 if __name__ == "__main__":
     main()
