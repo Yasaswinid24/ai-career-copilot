@@ -2,7 +2,8 @@ fastapi==0.136.1
 uvicorn==0.47.0
 groq==1.2.0
 python-dotenv==1.2.2
-pandas==2.2.2
+pandas
+numpy
 requests==2.31.0
 beautifulsoup4==4.12.3
 hunter
