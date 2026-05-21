@@ -157,10 +157,10 @@ CV:
 {resume}
 
 Job: {req.title} at {req.company} ({req.job_type})
-Pre-matched keywords: {req.matched_skills}
-Pre-identified missing: {req.missing_skills}
 
-FULL JOB DESCRIPTION (use this to find ALL missing keywords):
+IGNORE pre-computed fields. Do a FRESH analysis from the job description below.
+
+{req.description[:2000] if req.description else "Title: " + req.title + " at " + req.company}
 {req.description[:1500] if req.description else "Not available"}
 
 STRICT SCORING RUBRIC:
