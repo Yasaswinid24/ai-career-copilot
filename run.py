@@ -77,6 +77,7 @@ def main():
   [6] Tailor CV for a job  (ATS check)
   [7] Application tracker
   [8] Open dashboard
+  [9] Rescore jobs only (resume updated, jobs unchanged)
   [q] Quit
 """)
 
@@ -114,6 +115,16 @@ def main():
         elif choice == '8':
             print("\nOpen Ports tab → port 8080")
             subprocess.run([sys.executable, "-m", "http.server", "8080"])
+
+        elif choice == '9':
+            print("\nRescoring jobs with updated resume...")
+            print("This takes ~10 minutes. Jobs are not re-scraped.")
+            subprocess.run([sys.executable, "-c",
+                "import os; os.remove('matched_jobs.csv')" +
+                " if os.path.exists('matched_jobs.csv') else None"])
+            run("src/rag_matcher.py")
+            print("\nDone! Push to update live site:")
+            print("  git add matched_jobs.csv && git commit -m 'Rescore' && git push")
 
         elif choice == 'q':
             print("\nGood luck today!")

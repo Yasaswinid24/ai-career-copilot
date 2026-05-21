@@ -25,6 +25,10 @@ from recruiter_finder import find_recruiter
 load_dotenv()
 
 # Import auth
+from src.google_auth import (
+    router as google_router, get_user_scores,
+    save_user_scores, get_or_create_user
+)
 from src.auth import (init_db, get_current_user, get_user_applications,
                       add_application, update_cv, router as auth_router)
 
@@ -36,6 +40,9 @@ MODEL  = "llama-3.1-8b-instant"
 
 app = FastAPI()
 app.include_router(auth_router)
+app.include_router(google_router)
+from starlette.middleware.sessions import SessionMiddleware
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY","changeme"))
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -100,8 +107,24 @@ class StatusUpdate(BaseModel):
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 @app.get("/api/jobs")
-def get_jobs():
+def get_jobs(request: Request):
     try:
+        # Check if user is logged in
+        token = request.cookies.get("session_token")
+        if token:
+            import sqlite3
+            conn = sqlite3.connect("users.db")
+            c = conn.cursor()
+            c.execute("SELECT id FROM users WHERE email=?", (token,))
+            row = c.fetchone()
+            conn.close()
+            if row:
+                user_id = row[0]
+                scores = get_user_scores(user_id)
+                if scores:
+                    return scores
+
+        # Fall back to shared matched_jobs.csv for non-logged-in users
         df = pd.read_csv("matched_jobs.csv")
         df = df[~df["verdict"].isin(["Error","API Error"])]
         df = df.sort_values(
@@ -318,3 +341,79 @@ async def upload_cv(req: dict, request: Request):
         return {"error": "Not logged in"}
     update_cv(user["id"], req.get("cv_text",""))
     return {"status": "saved"}
+
+
+# ── Per-user CV upload and scoring ────────────────────────────────────────────
+
+from fastapi import UploadFile, File
+from src.google_auth import save_user_scores
+
+@app.post("/api/cv/upload")
+async def upload_cv(request: Request, cv_text: str = ""):
+    """Save user's CV text and trigger per-user scoring."""
+    token = request.cookies.get("session_token")
+    if not token:
+        return {"error": "Not logged in"}
+
+    import sqlite3
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    c.execute("UPDATE users SET cv_text=? WHERE email=?", (cv_text, token))
+    conn.commit()
+    c.execute("SELECT id FROM users WHERE email=?", (token,))
+    row = c.fetchone()
+    conn.close()
+
+    if not row:
+        return {"error": "User not found"}
+
+    return {"status": "saved", "user_id": row[0],
+            "message": "CV saved. Click Score My CV to get personalised results."}
+
+
+@app.post("/api/cv/score")
+async def score_cv_for_user(request: Request):
+    """Score all current jobs against the user's uploaded CV using RAG."""
+    import sys, os
+    sys.path.append(os.path.dirname(__file__))
+
+    token = request.cookies.get("session_token")
+    if not token:
+        return {"error": "Not logged in"}
+
+    import sqlite3
+    conn = sqlite3.connect("users.db")
+    c = conn.cursor()
+    c.execute("SELECT id, cv_text FROM users WHERE email=?", (token,))
+    row = c.fetchone()
+    conn.close()
+
+    if not row or not row[1]:
+        return {"error": "No CV found. Please upload your CV first."}
+
+    user_id = row[0]
+    cv_text = row[1]
+
+    try:
+        from src.rag_matcher import run_rag_matching
+        import tempfile, pandas as pd
+
+        # Run RAG matching with user's CV
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+            tmp_output = f.name
+
+        result_df = run_rag_matching(cv_text, "jobs.csv", tmp_output)
+
+        if result_df is not None:
+            scores = result_df.fillna("").to_dict(orient="records")
+            save_user_scores(user_id, scores)
+            os.unlink(tmp_output)
+            return {
+                "status": "scored",
+                "total": len(scores),
+                "apply_now": len([s for s in scores if s.get("verdict") == "Apply Now"]),
+                "message": f"Scored {len(scores)} jobs against your CV"
+            }
+        return {"error": "Scoring failed"}
+    except Exception as e:
+        return {"error": str(e)}

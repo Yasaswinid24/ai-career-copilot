@@ -40,6 +40,26 @@ def init_db():
             date_applied TEXT
         )
     """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS job_scores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            title TEXT,
+            company TEXT,
+            location TEXT,
+            job_type TEXT,
+            priority INTEGER,
+            published TEXT,
+            match_score INTEGER,
+            verdict TEXT,
+            matched_skills TEXT,
+            missing_skills TEXT,
+            reason TEXT,
+            link TEXT,
+            scraped_at TEXT,
+            scored_at TEXT
+        )
+    """)
     conn.commit()
     conn.close()
 
