@@ -3,33 +3,59 @@ M.Sc. Artificial Intelligence, BTU Cottbus (2025-2027)
 B.Tech Computer Science, Amrita School of Computing (2020-2024), CGPA: 7.2/10
 Based in Cottbus, Germany. Available 20 hrs/week as Werkstudent.
 
+PROFILE:
+Published Springer researcher (AIST-2024), ML intern at Fractal Analytics,
+and active BTU Research Assistant. Builds end-to-end ML pipelines across NLP,
+deep learning, computer vision, speech processing, and agentic LLM systems.
+Seeking Werkstudent or ML internship in Germany.
+
 SKILLS:
-Python, SQL, C, JavaScript, scikit-learn, Pandas, NumPy, Matplotlib, Seaborn,
-TensorFlow, Keras, PyTorch, CNN, LSTM, Transformer architectures,
-BERT, DistilBERT, XLM-RoBERTa, Hugging Face Transformers, RAG, NER, CRF,
-LangGraph, LangChain, Groq API, FAISS, FastAPI, Docker,
-HuBERT, HiFi-GAN, OpenCV, Git, GitHub, Linux, REST APIs
+Python, SQL, C, JavaScript
+scikit-learn, Pandas, NumPy, Matplotlib, Seaborn
+TensorFlow, Keras, PyTorch, CNN, LSTM, Transformer architectures
+BERT, DistilBERT, XLM-RoBERTa, Hugging Face Transformers, RAG, NER, CRF
+LangGraph, LangChain, Groq API, FAISS vector search, structured prompting
+HuBERT, HiFi-GAN, OpenCV, ADAS-applicable computer vision
+Git, GitHub, Docker, FastAPI, Linux, Jupyter, REST APIs
 
 EXPERIENCE:
 - Academic Research Assistant, BTU Cottbus (Feb 2026 - Ongoing)
-  PyTorch pipeline for music synthesis and audio pattern recognition
-  Automated MFCC and spectrogram feature extraction using Librosa
+  Deep learning pipeline for music synthesis and audio pattern recognition
+  Automated MFCC and spectrogram feature extraction using PyTorch and Librosa
   Reduced data preparation time by 50%
+  Applicable to generative audio and signal processing research
 
 - Machine Learning Intern, Fractal Analytics (June 2023 - Aug 2023)
   Fine-tuned BERT on 500+ employee feedback records, 95%+ accuracy
   Automated preprocessing pipeline, reduced manual work by 65%
+  Applicable to enterprise NLP and HR analytics pipelines
 
 PUBLICATION:
 Bilingual Speech Translation Between Tamil and Telugu (AIST-2024, Springer)
 DOI: 10.1007/978-3-031-91331-0_8
+Low-resource multilingual NLP, S2UT model, 150M+ speakers served
 
 PROJECTS:
-1. AI Career Copilot - LangGraph, Groq, RAG, FAISS, FastAPI, Docker, multi-agent job discovery
-2. Job Email Classification - XLM-RoBERTa, AUC 0.95, CNN vs transformer, 8 F1 points improvement
-3. Multilingual Speech Translation - HuBERT, HiFi-GAN, ASR+MT+TTS pipeline, AIST-2024 basis
-4. Driver Drowsiness Detection - CNN, OpenCV, 99%+ accuracy, 2s alert response
-5. Aspect-Based Sentiment Analysis - BERT/DistilBERT/CRF, F1 improved by 6 points
+1. AI Career Copilot (LIVE at ai-career-copilot-0b72.onrender.com)
+   LangGraph, Groq LLMs, RAG, FAISS, FastAPI, Docker
+   Production agentic AI system with human-in-the-loop design
+   Multi-agent pipeline: scraping, matching, ATS analysis, outreach generation
+
+2. Job Application Email Classification
+   XLM-RoBERTa, AUC 0.95, CNN vs transformer benchmarking, 8 F1 points improvement
+   Applicable to enterprise CRM automation and document classification
+
+3. Multilingual Speech Translation (basis of AIST-2024 publication)
+   HuBERT, HiFi-GAN, real-time ASR+MT+TTS pipeline, GPU training
+   Applicable to multilingual enterprise communication and voice AI systems
+
+4. Real-Time Driver Drowsiness Detection
+   CNN, OpenCV, 99%+ accuracy, 2-second alert response
+   Applicable to ADAS and automotive safety pipelines
+
+5. Aspect-Based Sentiment Analysis (Hindi)
+   BERT/DistilBERT/CRF, F1 improved by 6 points over HMM-Viterbi
+   Applicable to product review mining and customer intelligence systems
 
 LANGUAGES:
 English C1, German A2 (B1 course ongoing), Telugu Native, Tamil Professional
