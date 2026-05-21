@@ -150,44 +150,45 @@ def get_tracker(request: Request):
 @app.post("/api/ats")
 def run_ats(req: JobRequest):
     resume = load_resume()
-    prompt = f"""You are a strict ATS specialist. Analyse this CV against this job.
-Use the FULL 0-100 range. Do NOT default to 85.
+    prompt = f"""You are an ATS keyword analyst. Your job is evidence-based only.
 
-CV:
+STRICT RULES:
+1. ONLY report what is EXPLICITLY written in the job description below
+2. NEVER invent or assume requirements not stated in the text
+3. Do NOT add German requirements unless the JD explicitly mentions German
+4. Do NOT add experience years unless the JD explicitly states them
+5. Every item in critical_missing MUST be a word/phrase found in the JD text
+
+CANDIDATE CV:
 {resume}
 
-Job: {req.title} at {req.company} ({req.job_type})
+JOB: {req.title} at {req.company}
 
-IGNORE pre-computed fields. Do a FRESH analysis from the job description below.
+JOB DESCRIPTION (your ONLY source of truth):
+{req.description[:2000] if req.description else req.title + " at " + req.company}
 
-{req.description[:2000] if req.description else "Title: " + req.title + " at " + req.company}
-{req.description[:1500] if req.description else "Not available"}
+INSTRUCTIONS:
+- Read the job description above
+- List every technical skill, tool, language explicitly mentioned
+- Check each against the CV
+- critical_missing = skills in JD but NOT in CV
+- found_keywords = skills in BOTH JD and CV
+- Score = percentage of JD requirements covered by CV
 
-STRICT SCORING RUBRIC:
-90-100: 90 percent+ of job keywords present. Perfect alignment.
-75-89:  70-89 percent of keywords. Minor gaps only.
-60-74:  50-69 percent of keywords. Several important gaps.
-40-59:  30-49 percent of keywords. Major gaps.
-0-39:   Less than 30 percent. Wrong profile entirely.
-
-HARD PENALTIES:
-- Job requires German C1/C2, CV shows A2: -25 points
-- Job requires 3+ years experience: -20 points
-- Job completely unrelated to candidate: -40 points
-- Missing critical tech (AWS, C++, ROS): -10 per item
-
-BONUSES:
-- Published research matching job domain: +10
-- Direct industry experience match: +10
-- All core technical skills present: +5
+SCORING:
+90-100: CV covers 90%+ of explicit JD requirements
+75-89:  CV covers 70-89%
+60-74:  CV covers 50-69%
+40-59:  CV covers 30-49%
+0-39:   CV covers less than 30%
 
 Respond ONLY with valid JSON:
 {{
   "ats_score": <integer 0-100>,
-  "critical_missing": ["kw1","kw2"],
-  "found_keywords": ["kw1","kw2"],
-  "top_suggestion": "one specific actionable suggestion",
-  "summary": "2 specific sentences explaining the score"
+  "critical_missing": ["only items explicitly in JD but missing from CV"],
+  "found_keywords": ["items in both JD and CV"],
+  "top_suggestion": "one specific skill from the JD to add to CV",
+  "summary": "2 sentences based only on evidence from the JD"
 }}"""
     try:
         r = client.chat.completions.create(
