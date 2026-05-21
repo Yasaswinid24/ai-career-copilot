@@ -12,7 +12,7 @@ import os
 import json
 import pandas as pd
 from datetime import datetime, timedelta
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
