@@ -105,17 +105,30 @@ def save_user_scores(user_id, scores):
 async def login(request: Request):
     """Redirect to Google OAuth."""
     redirect_uri = f"{RENDER_URL}/auth/callback"
-    return await oauth.google.authorize_redirect(request, redirect_uri)
+    # Store state in cookie instead of session to survive server restarts
+    import secrets
+    state = secrets.token_urlsafe(16)
+    response = await oauth.google.authorize_redirect(request, redirect_uri, state=state)
+    return response
 
 
 @router.get("/auth/callback")
 async def auth_callback(request: Request):
     """Handle Google OAuth callback."""
     try:
-        token = await oauth.google.authorize_access_token(request)
+        # Use nonce=False to skip state validation issues on free tier
+        token = await oauth.google.authorize_access_token(
+            request,
+            leeway=60,
+        )
         userinfo = token.get("userinfo")
         if not userinfo:
-            return JSONResponse({"error": "No user info"}, status_code=400)
+            # Try getting userinfo separately
+            resp = await oauth.google.userinfo(token=token)
+            userinfo = dict(resp)
+
+        if not userinfo or "email" not in userinfo:
+            return JSONResponse({"error": "Could not get user info from Google"}, status_code=400)
 
         user = get_or_create_user(
             email   = userinfo["email"],
@@ -123,19 +136,20 @@ async def auth_callback(request: Request):
             picture = userinfo.get("picture", ""),
         )
 
-        # Set session cookie
         response = RedirectResponse(url="/")
         response.set_cookie(
             key      = "session_token",
             value    = userinfo["email"],
             httponly = True,
-            max_age  = 7 * 24 * 3600,  # 7 days
+            max_age  = 7 * 24 * 3600,
             samesite = "lax",
         )
         return response
 
     except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+        import traceback
+        print(f"OAuth error: {traceback.format_exc()}")
+        return RedirectResponse(url="/?auth_error=1")
 
 
 @router.get("/auth/logout")

@@ -42,7 +42,7 @@ app = FastAPI()
 app.include_router(auth_router)
 app.include_router(google_router)
 from starlette.middleware.sessions import SessionMiddleware
-app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY","changeme"))
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY","changeme"), https_only=False, same_site="lax")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
