@@ -11,10 +11,18 @@ router  = APIRouter()
 
 def init_db():
     conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    # Add google_id column if missing (migration)
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN google_id TEXT")
+        conn.commit()
+    except:
+        pass  # Column already exists
     c    = conn.cursor()
     c.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            google_id TEXT,
             email TEXT UNIQUE,
             name TEXT,
             picture TEXT,

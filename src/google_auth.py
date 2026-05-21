@@ -49,8 +49,8 @@ def get_or_create_user(email, name, picture):
         return {"id": user[0], "email": user[1], "name": user[2], "picture": user[3]}
     # Create new user
     c.execute(
-        "INSERT INTO users (email, name, picture, created_at) VALUES (?,?,?,?)",
-        (email, name, picture, datetime.now().strftime("%Y-%m-%d %H:%M"))
+        "INSERT INTO users (google_id, email, name, picture, created_at) VALUES (?,?,?,?,?)",
+        (email, email, name, picture, datetime.now().strftime("%Y-%m-%d %H:%M"))
     )
     conn.commit()
     user_id = c.lastrowid
