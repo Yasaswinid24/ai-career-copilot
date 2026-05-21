@@ -126,22 +126,41 @@ def get_tracker(request: Request):
 @app.post("/api/ats")
 def run_ats(req: JobRequest):
     resume = load_resume()
-    prompt = f"""You are an ATS specialist. Analyse this CV for this job.
+    prompt = f"""You are a strict ATS specialist. Analyse this CV against this job.
+Use the FULL 0-100 range. Do NOT default to 85.
 
 CV:
 {resume}
 
 Job: {req.title} at {req.company} ({req.job_type})
-Already matched: {req.matched_skills}
-Missing: {req.missing_skills}
+Matched keywords: {req.matched_skills}
+Missing keywords: {req.missing_skills}
 
-Respond ONLY with JSON:
+STRICT SCORING RUBRIC:
+90-100: 90 percent+ of job keywords present. Perfect alignment.
+75-89:  70-89 percent of keywords. Minor gaps only.
+60-74:  50-69 percent of keywords. Several important gaps.
+40-59:  30-49 percent of keywords. Major gaps.
+0-39:   Less than 30 percent. Wrong profile entirely.
+
+HARD PENALTIES:
+- Job requires German C1/C2, CV shows A2: -25 points
+- Job requires 3+ years experience: -20 points
+- Job completely unrelated to candidate: -40 points
+- Missing critical tech (AWS, C++, ROS): -10 per item
+
+BONUSES:
+- Published research matching job domain: +10
+- Direct industry experience match: +10
+- All core technical skills present: +5
+
+Respond ONLY with valid JSON:
 {{
-  "ats_score": <0-100>,
+  "ats_score": <integer 0-100>,
   "critical_missing": ["kw1","kw2"],
   "found_keywords": ["kw1","kw2"],
-  "top_suggestion": "one specific thing to add to CV",
-  "summary": "2 sentence assessment"
+  "top_suggestion": "one specific actionable suggestion",
+  "summary": "2 specific sentences explaining the score"
 }}"""
     try:
         r = client.chat.completions.create(
