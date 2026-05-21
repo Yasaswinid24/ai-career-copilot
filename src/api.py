@@ -88,6 +88,7 @@ class JobRequest(BaseModel):
     match_score: int = 0
     matched_skills: str = ""
     missing_skills: str = ""
+    description: str = ""
 
 
 class ApplyRequest(BaseModel):
@@ -156,8 +157,11 @@ CV:
 {resume}
 
 Job: {req.title} at {req.company} ({req.job_type})
-Matched keywords: {req.matched_skills}
-Missing keywords: {req.missing_skills}
+Pre-matched keywords: {req.matched_skills}
+Pre-identified missing: {req.missing_skills}
+
+FULL JOB DESCRIPTION (use this to find ALL missing keywords):
+{req.description[:1500] if req.description else "Not available"}
 
 STRICT SCORING RUBRIC:
 90-100: 90 percent+ of job keywords present. Perfect alignment.
