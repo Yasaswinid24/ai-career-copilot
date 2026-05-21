@@ -17,8 +17,9 @@ INELIGIBLE_TITLE_WORDS = [
 ]
 
 AUSBILDUNG_WORDS = [
+    "duales studium", "duale hochschule", "dhbw", "dual study",
     "ausbildung", "auszubildende", "azubi",
-    "berufsausbildung", "vocational",
+    "berufsausbildung", "vocational", "duales studium", "duale", "dhbw", "dual study",
 ]
 
 THESIS_WORDS = [
