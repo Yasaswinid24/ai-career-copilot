@@ -88,9 +88,20 @@ def main():
             run("src/scraper.py")
             run("src/freshness_check.py")
             run("src/eligibility_checker.py")
-            run("src/smart_matcher.py")
+            
             print("\nStarting dashboard — open Ports tab → port 8080")
-            subprocess.run([sys.executable, "-m", "http.server", "8080"])
+            port = 8080
+import socket
+while True:
+    try:
+        s = socket.socket()
+        s.bind(("", port))
+        s.close()
+        break
+    except OSError:
+        port += 1
+print(f"Starting dashboard on port {port}...")
+subprocess.run([sys.executable, "-m", "http.server", str(port)])
 
         elif choice == '2':
             run("src/scraper.py")
@@ -101,7 +112,7 @@ def main():
             run("src/eligibility_checker.py")
 
         elif choice == '4':
-            run("src/smart_matcher.py")
+            
 
         elif choice == '5':
             run("src/apply.py")
@@ -114,7 +125,18 @@ def main():
 
         elif choice == '8':
             print("\nOpen Ports tab → port 8080")
-            subprocess.run([sys.executable, "-m", "http.server", "8080"])
+            port = 8080
+import socket
+while True:
+    try:
+        s = socket.socket()
+        s.bind(("", port))
+        s.close()
+        break
+    except OSError:
+        port += 1
+print(f"Starting dashboard on port {port}...")
+subprocess.run([sys.executable, "-m", "http.server", str(port)])
 
         elif choice == '9':
             print("\nRescoring jobs with updated resume...")
@@ -125,9 +147,8 @@ def main():
             run("src/rag_matcher.py")
             print("\nPushing to GitHub to update live site...")
             subprocess.run(["git", "add", "matched_jobs.csv"])
-            from datetime import datetime
             subprocess.run(["git", "commit", "-m",
-                           f"Rescore: {datetime.now().strftime('%Y-%m-%d')}"])
+                           f"Rescore: {__import__('datetime').datetime.now().strftime('%Y-%m-%d')}"])
             subprocess.run(["git", "push"])
             print("\nLive site updated!")
 
