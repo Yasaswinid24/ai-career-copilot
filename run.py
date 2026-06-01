@@ -123,8 +123,13 @@ def main():
                 "import os; os.remove('matched_jobs.csv')" +
                 " if os.path.exists('matched_jobs.csv') else None"])
             run("src/rag_matcher.py")
-            print("\nDone! Push to update live site:")
-            print("  git add matched_jobs.csv && git commit -m 'Rescore' && git push")
+            print("\nPushing to GitHub to update live site...")
+            subprocess.run(["git", "add", "matched_jobs.csv"])
+            from datetime import datetime
+            subprocess.run(["git", "commit", "-m",
+                           f"Rescore: {datetime.now().strftime('%Y-%m-%d')}"])
+            subprocess.run(["git", "push"])
+            print("\nLive site updated!")
 
         elif choice == 'q':
             print("\nGood luck today!")
