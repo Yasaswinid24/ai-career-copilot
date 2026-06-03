@@ -1,7 +1,7 @@
 """
 AI Career Copilot — Daily Runner
 """
-import os, sys, subprocess, pandas as pd
+import os, sys, subprocess, socket, pandas as pd
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 load_dotenv()
@@ -11,7 +11,7 @@ def header(text):
 
 def check_keys():
     print("\nAPI Keys:")
-    for name, key in [("Groq", "GROQ_API_KEY"), ("Hunter", "HUNTER_API_KEY"), ("Adzuna", "ADZUNA_APP_ID")]:
+    for name, key in [("Groq","GROQ_API_KEY"),("Hunter","HUNTER_API_KEY"),("Adzuna","ADZUNA_APP_ID")]:
         val = os.getenv(key)
         print(f"  {name:<8} {'OK' if val else 'MISSING'}")
 
@@ -53,6 +53,30 @@ def run(script):
     subprocess.run([sys.executable, script],
                    cwd=os.path.dirname(os.path.abspath(__file__)))
 
+def git_push(message):
+    subprocess.run(["git", "add", "jobs.csv", "matched_jobs.csv", "thesis_roles.csv"])
+    result = subprocess.run(["git", "commit", "-m", message], capture_output=True, text=True)
+    if "nothing to commit" in result.stdout:
+        print("  Nothing new to push")
+    else:
+        subprocess.run(["git", "push"])
+        print("  Live site updated!")
+
+def start_dashboard():
+    port = 8080
+    while True:
+        try:
+            s = socket.socket()
+            s.bind(("", port))
+            s.close()
+            break
+        except OSError:
+            port += 1
+    print(f"\nStarting dashboard on port {port}")
+    print("Open Ports tab → click globe icon")
+    print("Press Ctrl+C to stop\n")
+    subprocess.run([sys.executable, "-m", "http.server", str(port)])
+
 def main():
     print("="*55)
     print(f"  AI Career Copilot — {datetime.now().strftime('%A, %d %B %Y')}")
@@ -62,14 +86,14 @@ def main():
     check_keys()
 
     header("Data Freshness")
-    needs_scrape = check_freshness()
+    check_freshness()
 
     header("Follow-up Reminders")
     check_followups()
 
     header("What do you want to do?")
     print("""
-  [1] Full pipeline  (scrape → eligibility → score → dashboard)
+  [1] Full pipeline  (scrape + filter + score + push + dashboard)
   [2] Scrape fresh jobs only
   [3] Check eligibility of scraped jobs
   [4] Score jobs against my CV
@@ -88,31 +112,25 @@ def main():
             run("src/scraper.py")
             run("src/freshness_check.py")
             run("src/eligibility_checker.py")
-            
-            print("\nStarting dashboard — open Ports tab → port 8080")
-            port = 8080
-import socket
-while True:
-    try:
-        s = socket.socket()
-        s.bind(("", port))
-        s.close()
-        break
-    except OSError:
-        port += 1
-print(f"Starting dashboard on port {port}...")
-subprocess.run([sys.executable, "-m", "http.server", str(port)])
+            run("src/rag_matcher.py")
+            print("\nPushing to GitHub...")
+            git_push("Auto-update fresh jobs")
+            start_dashboard()
 
         elif choice == '2':
             run("src/scraper.py")
             run("src/freshness_check.py")
             run("src/eligibility_checker.py")
+            print("\nPushing to GitHub...")
+            git_push("Fresh job listings")
 
         elif choice == '3':
             run("src/eligibility_checker.py")
 
         elif choice == '4':
-            
+            run("src/rag_matcher.py")
+            print("\nPushing to GitHub...")
+            git_push("Updated job scores")
 
         elif choice == '5':
             run("src/apply.py")
@@ -124,39 +142,21 @@ subprocess.run([sys.executable, "-m", "http.server", str(port)])
             run("src/tracker.py")
 
         elif choice == '8':
-            print("\nOpen Ports tab → port 8080")
-            port = 8080
-import socket
-while True:
-    try:
-        s = socket.socket()
-        s.bind(("", port))
-        s.close()
-        break
-    except OSError:
-        port += 1
-print(f"Starting dashboard on port {port}...")
-subprocess.run([sys.executable, "-m", "http.server", str(port)])
+            start_dashboard()
 
         elif choice == '9':
-            print("\nRescoring jobs with updated resume...")
-            print("This takes ~10 minutes. Jobs are not re-scraped.")
             subprocess.run([sys.executable, "-c",
-                "import os; os.remove('matched_jobs.csv')" +
-                " if os.path.exists('matched_jobs.csv') else None"])
+                "import os; os.remove('matched_jobs.csv') if os.path.exists('matched_jobs.csv') else None"])
             run("src/rag_matcher.py")
-            print("\nPushing to GitHub to update live site...")
-            subprocess.run(["git", "add", "matched_jobs.csv"])
-            subprocess.run(["git", "commit", "-m",
-                           f"Rescore: {__import__('datetime').datetime.now().strftime('%Y-%m-%d')}"])
-            subprocess.run(["git", "push"])
-            print("\nLive site updated!")
+            print("\nPushing to GitHub...")
+            git_push("Rescore jobs")
 
         elif choice == 'q':
             print("\nGood luck today!")
             break
+
         else:
-            print("Enter 1-8 or q")
+            print("Enter 1-9 or q")
 
 if __name__ == "__main__":
     main()
