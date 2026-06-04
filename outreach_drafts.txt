@@ -1,0 +1,42 @@
+
+=======================================================
+DATE:    2026-05-18 14:11
+STATUS:  READY TO SEND
+JOB:     Machine Learning Engineer (w/m/d)
+COMPANY: Brunel GmbH NL Braunschweig
+LINK:    https://www.arbeitsagentur.de/jobsuche/jobdetail/12362-TR-249390_610624LS-S
+SCORE:   92/100
+=======================================================
+SUBJECT: "Yasaswini Dharmavarapu - ML Engineer Position Application at Brunel GmbH"
+
+Dear Hiring Team at Brunel GmbH,
+
+I'm reaching out because I'm excited about the Machine Learning Engineer position at Brunel GmbH and believe my skills and experience make me a strong fit. As a graduate student in Artificial Intelligence at BTU Cottbus, I've developed expertise in building scalable machine learning pipelines using PyTorch and fine-tuning BERT for high-accuracy results, as seen in my work on the Job Email Classification project. I'm also proficient in building RESTful APIs and containerizing applications with Docker.
+
+Based in Cottbus, Germany, I'm available to work 20 hours a week as a Werkstudent. I'm confident that my skills and passion for machine learning would make me a valuable asset to the Brunel GmbH team. I'd love to schedule a call to discuss how I can contribute to your projects.
+
+Best regards,
+Yasaswini Dharmavarapu
+
+=======================================================
+DATE:      2026-05-18 14:28
+STATUS:    READY TO SEND
+JOB:       Machine Learning Engineer (w/m/d)
+COMPANY:   Brunel GmbH NL Braunschweig
+RECRUITER: Amin Haque — amin.haque@brunel.com
+SCORE:     92/100
+LINK:      https://www.arbeitsagentur.de/jobsuche/jobdetail/12362-TR-249390_610624LS-S
+=======================================================
+SUBJECT: "Machine Learning Engineer Position at Brunel GmbH NL Braunschweig"
+
+Dear Amin,
+
+I came across the Machine Learning Engineer (w/m/d) position at Brunel GmbH in Braunschweig, and I'm excited to apply. With a strong background in deep learning and extensive experience in PyTorch, I'm confident in my ability to drive impactful projects.
+
+Notably, I've fine-tuned BERT for 500+ employee feedback records, achieving 95%+ accuracy, and automated data preparation time by 50% as an Academic Research Assistant at BTU Cottbus. I'm eager to leverage my skills in building sophisticated ML pipelines for your team.
+
+As a Werkstudent based in Cottbus, I'm available 20 hours a week. I'd love to discuss how I can contribute to Brunel GmbH's success. Please find attached my resume, and I look forward to hearing from you.
+
+Best regards,
+Yasaswini Dharmavarapu
+ 
