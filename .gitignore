@@ -1,0 +1,9 @@
+.env
+outreach_drafts.txt
+thesis_roles.csv
+src/__pycache__/
+*.pyc
+outreach_drafts.txt
+thesis_roles.csv
+src/__pycache__/
+*.pyc

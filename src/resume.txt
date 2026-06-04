@@ -1,0 +1,70 @@
+﻿Yasaswini Dharmavarapu
+yasaswani.dharmavarapu@gmail.com | +49 15510540988
+linkedin.com/in/yasaswiniD | github.com/Yassu-24 | github.com/Yasaswinid24
+
+PROFILE SUMMARY
+M.Sc. Artificial Intelligence student at BTU Cottbus with a published conference paper (AIST-2024, Springer), full-time industry experience in healthcare AI, and an active research role in Music AI. Specialises in NLP, LLMs, speech AI, and end-to-end ML systems. Progressed from AI/ML Intern to Software Engineer at Availity, building production features that reduced physician documentation time by 25 minutes per doctor using Whisper, Wav2Vec2, LangChain, and GPT-4 prompt engineering. Seeking a Werkstudent or ML internship role in Germany. German level A2, English level C1.
+
+CORE COMPETENCIES
+Languages: Python, SQL, C, JavaScript
+ML & Data: scikit-learn, Pandas, NumPy, Matplotlib, Seaborn, REST APIs
+Deep Learning: TensorFlow, Keras, PyTorch, CNN, LSTM, Transformer architectures
+NLP & LLMs: BERT, DistilBERT, XLM-RoBERTa, Hugging Face Transformers, LangChain, GPT-4, Claude APIs, Prompt Engineering, TF-IDF, NER, CRF
+Speech & Vision: Whisper, Wav2Vec2, HuBERT, HiFi-GAN, OpenCV
+Tools & DevOps: Git, GitHub, Docker, Linux, Jupyter Notebook, Google Colab
+Agentic AI: LangGraph, multi-agent systems, RAG, FAISS, FastAPI, human-in-the-loop pipelines
+
+EXPERIENCE
+
+Academic Research Assistant | Feb 2026 - Present
+Brandenburg University of Technology (BTU) Cottbus
+- Designed and implemented a deep learning research pipeline for music synthesis and audio pattern recognition using PyTorch, establishing a reproducible framework now used as the foundation for ongoing faculty-supervised Music AI publications
+- Built automated audio feature extraction workflows (MFCCs, spectrograms) using Python and Librosa, reducing data preparation time by over 50% and enabling faster experimentation cycles
+
+Associate Software Engineer | June 2024 - March 2025
+Availity
+- AI Clinical Copilot Full Ownership: Took on end-to-end engineering responsibility for the AI Clinical Copilot product, owning the ICD-10 code recommendation, drug interaction warning, and treatment pathway suggestion features using GPT-4 prompt engineering and LangChain pipelines in a production healthcare environment
+- Prompt Engineering at Scale: Designed, iterated, and maintained structured GPT-4 prompts for clinical decision support; conducted systematic evaluation of model outputs against clinical benchmarks to ensure safety and accuracy before deployment
+- Led integration of LLM-powered features into Availity backend APIs, collaborating cross-functionally with a 6-person engineering team to meet reliability, latency, and clinical accuracy requirements
+
+AI & ML Intern | Jan 2024 - June 2024
+Availity
+- Voice-to-Structured EMR Pipeline: Contributed to building a real-time speech-to-text pipeline using Whisper and Wav2Vec2 that transcribed physician speech and converted it into structured EMR fields, eliminating manual data entry after patient consultations
+- AI Doctor Note Generation: Developed LLM-powered auto-note generation using LangChain and OpenAI, designing prompts that transformed transcribed speech into formatted, clinically accurate SOAP notes, reducing physician documentation time by 25 minutes per doctor per session
+- AI Chat Assistant: Contributed to a conversational AI assistant enabling doctors to query patient history and receive AI-generated clinical suggestions using LangChain and GPT-based inference
+
+Machine Learning Intern | June 2023 - Aug 2023
+Fractal Analytics
+- Fine-tuned DistilBERT on people analytics data, classifying sentiment and behavioural patterns across 500+ employee records, achieving 95%+ classification accuracy
+- Automated the entire data cleaning and preprocessing pipeline using Python, reducing manual processing time by 65%
+
+EDUCATION
+Brandenburg University of Technology (BTU) Cottbus | April 2025 - Present
+M.Sc. in Artificial Intelligence (ongoing) | Expected Graduation: 2027
+
+Amrita School of Computing, Coimbatore | 2020 - 2024
+B.Tech in Computer Science and Engineering
+
+PUBLICATION
+Bilingual Speech Translation Between Tamil and Telugu with Elimination of Dependency on Any Intermediate Languages
+- Self-Supervised Unit-to-Unit (S2UT) model for direct Tamil-Telugu speech translation; published at AIST-2024 (Springer) DOI: 10.1007/978-3-031-91331-0_8
+
+PROJECTS
+
+AI Career Copilot - Agentic Multi-Agent Job Discovery System
+github.com/Yasaswinid24/ai-career-copilot
+- Production multi-agent system using LangGraph and Groq LLMs with agents for job scraping, RAG-based resume matching, ATS keyword analysis, and personalised outreach via FastAPI backend with human-in-the-loop approval gates; deployed live on Render; containerised with Docker
+- Stack: Python, LangGraph, LangChain, Groq API, FAISS, FastAPI, Docker, Hugging Face
+
+Multilingual Speech Translation
+- Full ASR to MT to TTS pipeline using HuBERT and HiFi-GAN with multitask learning on GPU for real-time bidirectional Tamil-Telugu translation; basis of AIST-2024 Springer publication
+
+Real-Time Driver Drowsiness Detection
+- CNN on eye and facial landmark features using TensorFlow/Keras with real-time video via OpenCV; 99%+ test accuracy with safety alerts triggered within 2 seconds of fatigue onset
+
+LANGUAGES
+English: C1 | Telugu: Native | German: A2 (improving)
+
+ACHIEVEMENTS
+3rd Place - Build With AI Hackathon 2026
+ML-based email classification system for intent detection

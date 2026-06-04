@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Career Copilot</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a}
+header{background:#1a1a1a;color:white;padding:16px 32px;display:flex;align-items:center;justify-content:space-between}
+header h1{font-size:17px;font-weight:500}
+header span{font-size:12px;color:#888}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;padding:20px 32px 0}
+.stat{background:white;border-radius:10px;padding:14px 18px;border:1px solid #e8e8e8}
+.stat-label{font-size:11px;color:#888;margin-bottom:4px}
+.stat-value{font-size:24px;font-weight:600}
+.green{color:#16a34a}.amber{color:#d97706}.blue{color:#2563eb}.purple{color:#7c3aed}.dark{color:#1a1a1a}
+.controls{display:flex;gap:10px;padding:16px 32px;flex-wrap:wrap;align-items:center}
+.controls input{flex:1;min-width:200px;padding:8px 14px;border:1px solid #e8e8e8;border-radius:8px;font-size:13px;background:white;outline:none}
+.btn{padding:7px 14px;border-radius:8px;border:1px solid #e8e8e8;background:white;font-size:12px;cursor:pointer;transition:all 0.15s;color:#1a1a1a;white-space:nowrap}
+.btn.active{background:#1a1a1a;color:white;border-color:#1a1a1a}
+.btn.ws.active{background:#7c3aed;border-color:#7c3aed}
+.btn.pk.active{background:#2563eb;border-color:#2563eb}
+.btn:hover:not(.active){background:#f0f0eb}
+.count{font-size:12px;color:#888;padding:0 32px 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px;padding:0 32px 32px}
+.card{background:white;border-radius:12px;border:1px solid #e8e8e8;padding:20px;transition:box-shadow 0.2s}
+.card:hover{box-shadow:0 4px 20px rgba(0,0,0,0.08)}
+.card.ws{border-left:3px solid #7c3aed}
+.card.pk{border-left:3px solid #2563eb}
+.card.ft{border-left:3px solid #94a3b8}
+.card.applied{border-left:3px solid #16a34a;opacity:0.7}
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px}
+.job-title{font-size:14px;font-weight:600;line-height:1.4;flex:1}
+.score{font-size:14px;font-weight:700;min-width:42px;height:42px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sh{background:#dcfce7;color:#15803d}.sm{background:#fef9c3;color:#854d0e}.sl{background:#fee2e2;color:#b91c1c}
+.company{font-size:13px;color:#555;margin-bottom:2px}
+.location{font-size:12px;color:#999;margin-bottom:8px}
+.tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.tag{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em}
+.tag-ws{background:#ede9fe;color:#5b21b6}.tag-pk{background:#dbeafe;color:#1d4ed8}.tag-ft{background:#f1f5f9;color:#475569}
+.tag-apply{background:#dcfce7;color:#15803d}.tag-worth{background:#fef9c3;color:#854d0e}.tag-skip{background:#fee2e2;color:#b91c1c}
+.tag-applied{background:#d1fae5;color:#065f46}
+.reason{font-size:12px;color:#666;line-height:1.5;padding:9px;background:#f9f9f7;border-radius:7px;margin-bottom:10px}
+.skills{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.sk{font-size:11px;padding:2px 7px;border-radius:4px;font-weight:500}
+.sk-match{background:#e0f2fe;color:#0369a1}.sk-miss{background:#fce7f3;color:#9d174d}
+.actions{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.action-btn{flex:1;padding:8px 10px;border-radius:8px;border:none;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.15s;min-width:80px}
+.btn-ats{background:#f0f4ff;color:#2563eb}.btn-ats:hover{background:#dbeafe}
+.btn-email{background:#f5f0ff;color:#7c3aed}.btn-email:hover{background:#ede9fe}
+.btn-apply{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0}.btn-apply:hover{background:#dcfce7}
+.btn-link{background:#f9f9f7;color:#555}.btn-link:hover{background:#f0f0eb}
+.btn-applied{background:#dcfce7;color:#15803d;cursor:default}
+
+/* Modal */
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:20px}
+.modal.open{display:flex}
+.modal-box{background:white;border-radius:16px;padding:28px;max-width:600px;width:100%;max-height:85vh;overflow-y:auto;position:relative}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:4px}
+.modal-sub{font-size:13px;color:#888;margin-bottom:20px}
+.modal-close{position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#888;line-height:1}
+.modal-section{margin-bottom:16px}
+.modal-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:6px}
+.modal-content{font-size:13px;line-height:1.6;color:#333;background:#f9f9f7;padding:12px;border-radius:8px;white-space:pre-wrap}
+.ats-score{font-size:36px;font-weight:700;margin-bottom:4px}
+.kw-list{display:flex;flex-wrap:wrap;gap:5px}
+.kw{font-size:11px;padding:2px 8px;border-radius:4px}
+.kw-found{background:#dcfce7;color:#15803d}.kw-miss{background:#fee2e2;color:#b91c1c}
+.recruiter-card{border:1px solid #e8e8e8;border-radius:8px;padding:12px;margin-bottom:8px;cursor:pointer;transition:all 0.15s}
+.recruiter-card:hover,.recruiter-card.selected{border-color:#2563eb;background:#f0f4ff}
+.recruiter-name{font-size:13px;font-weight:500}
+.recruiter-email{font-size:12px;color:#2563eb}
+.recruiter-conf{font-size:11px;color:#888}
+.modal-input{width:100%;padding:9px 12px;border:1px solid #e8e8e8;border-radius:8px;font-size:13px;outline:none;margin-bottom:8px}
+.modal-input:focus{border-color:#2563eb}
+.modal-textarea{width:100%;padding:9px 12px;border:1px solid #e8e8e8;border-radius:8px;font-size:13px;outline:none;resize:vertical;min-height:120px;font-family:inherit;line-height:1.6}
+.modal-textarea:focus{border-color:#7c3aed}
+.modal-btn{padding:10px 20px;border-radius:8px;border:none;font-size:13px;font-weight:500;cursor:pointer}
+.modal-btn-primary{background:#1a1a1a;color:white}.modal-btn-primary:hover{background:#333}
+.modal-btn-secondary{background:#f0f0eb;color:#1a1a1a}.modal-btn-secondary:hover{background:#e8e8e3}
+.loader{display:inline-block;width:16px;height:16px;border:2px solid #e8e8e8;border-top-color:#1a1a1a;border-radius:50%;animation:spin 0.8s linear infinite;margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.followup-banner{background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:12px 20px;margin:0 32px 16px;font-size:13px;display:none}
+.followup-banner.show{display:block}
+.no-results{grid-column:1/-1;text-align:center;padding:60px;color:#888;font-size:14px}
+</style>
+</head>
+<body>
+
+<header>
+  <div style="display:flex;align-items:center;gap:16px">
+    <h1>AI Career Copilot</h1>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span id="updated" style="font-size:12px;color:#888"></span>
+    <div id="user-area"></div>
+  </div>
+</header>
+
+<div class="stats">
+  <div class="stat"><div class="stat-label">Total jobs</div><div class="stat-value dark" id="s-total">—</div></div>
+  <div class="stat"><div class="stat-label">Werkstudent</div><div class="stat-value purple" id="s-ws">—</div></div>
+  <div class="stat"><div class="stat-label">Praktikum</div><div class="stat-value blue" id="s-pk">—</div></div>
+  <div class="stat"><div class="stat-label">Apply Now</div><div class="stat-value green" id="s-apply">—</div></div>
+  <div class="stat"><div class="stat-label">Applied</div><div class="stat-value amber" id="s-applied">—</div></div>
+</div>
+
+<div id="cv-banner" style="background:#e0f2fe;border:1px solid #7dd3fc;border-radius:10px;padding:12px 20px;margin:16px 32px 0;font-size:13px;display:none">
+  <strong>Upload your CV</strong> to get personalised job matching.
+  <input type="file" id="cv-file" accept=".txt,.pdf" style="margin:0 8px">
+  <button onclick="uploadCV()" style="background:#2563eb;color:white;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px">Upload</button>
+  <span id="cv-status" style="margin-left:8px;color:#555"></span>
+</div>
+<div id="followup-banner" class="followup-banner"></div>
+
+<div class="controls">
+  <input type="text" id="search" placeholder="Search title, company, location..." oninput="render()">
+  <button class="btn active" onclick="setV('all',this)">All</button>
+  <button class="btn" onclick="setV('Apply Now',this)">Apply Now</button>
+  <button class="btn" onclick="setV('Worth Considering',this)">Worth Considering</button>
+  <button class="btn ws" onclick="setT('Werkstudent',this)">Werkstudent</button>
+  <button class="btn pk" onclick="setT('Praktikum',this)">Praktikum</button>
+</div>
+
+<div class="count" id="count"></div>
+<div class="grid" id="grid"></div>
+
+<!-- ATS Modal -->
+<div class="modal" id="ats-modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('ats-modal')">✕</button>
+    <div class="modal-title" id="ats-title"></div>
+    <div class="modal-sub" id="ats-sub"></div>
+    <div id="ats-content"><span class="loader"></span> Analysing with AI...</div>
+  </div>
+</div>
+
+<!-- Email Modal -->
+<div class="modal" id="email-modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('email-modal')">✕</button>
+    <div class="modal-title" id="email-title"></div>
+    <div class="modal-sub">Review and approve before sending</div>
+
+    <div class="modal-section">
+      <div class="modal-label">Recruiter contacts</div>
+      <div id="recruiter-list"><span class="loader"></span> Finding recruiter...</div>
+    </div>
+
+    <div class="modal-section" id="email-section" style="display:none">
+      <div class="modal-label">Subject</div>
+      <input class="modal-input" id="email-subject" type="text">
+      <div class="modal-label" style="margin-top:10px">Email body</div>
+      <textarea class="modal-textarea" id="email-body" rows="10"></textarea>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:12px" id="email-actions" style="display:none">
+      <button class="modal-btn modal-btn-secondary" onclick="regenerateEmail()">Regenerate</button>
+      <button class="modal-btn modal-btn-primary" onclick="saveAndApply()">Save draft + Mark as Applied</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+let allJobs=[], tracker=[], vf='all', tf='all', currentJob=null, selectedRecruiter=null;
+
+async function uploadCV(){
+  const file = document.getElementById('cv-file').files[0];
+  if(!file){ alert('Please select a file'); return; }
+  const text = await file.text();
+  const res = await fetch('/api/cv', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({cv_text: text})
+  }).then(r=>r.json()).catch(e=>({error:e.message}));
+  document.getElementById('cv-status').textContent = res.error ? 'Error: '+res.error : 'CV saved!';
+}
+
+async function init(){
+  // Check login status
+  const me = await fetch('/auth/me').then(r=>r.json()).catch(()=>({logged_in:false}));
+  const ua = document.getElementById('user-area');
+  if(me.logged_in){
+    ua.innerHTML = `<img src="${me.picture}" style="width:32px;height:32px;border-radius:50%;vertical-align:middle"> <span style="color:white;font-size:13px">${me.name}</span> <a href="/auth/logout" style="color:#aaa;font-size:12px;margin-left:8px">Logout</a>`;
+  } else {
+    ua.innerHTML = `<a href="/auth/login" style="background:#4285f4;color:white;padding:8px 16px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:500">Sign in with Google</a>`;
+  }
+  const [jobs, apps] = await Promise.all([
+    fetch(`${API}/api/jobs`).then(r=>r.json()).catch(()=>[]),
+    fetch(`${API}/api/tracker`).then(r=>r.json()).catch(()=>[])
+  ]);
+  allJobs = Array.isArray(jobs) ? jobs : [];
+  tracker = Array.isArray(apps) ? apps : [];
+  updateStats();
+  render();
+  checkFollowups();
+  const dates = allJobs.map(j=>j.scraped_at).filter(Boolean);
+  if(dates.length) document.getElementById('updated').textContent = 'Scraped: '+dates[0];
+}
+
+function isApplied(job){
+  return tracker.some(t => t.title===job.title && t.company===job.company);
+}
+
+function updateStats(){
+  document.getElementById('s-total').textContent = allJobs.length;
+  document.getElementById('s-ws').textContent = allJobs.filter(j=>j.job_type==='Werkstudent').length;
+  document.getElementById('s-pk').textContent = allJobs.filter(j=>j.job_type==='Praktikum').length;
+  document.getElementById('s-apply').textContent = allJobs.filter(j=>j.verdict==='Apply Now').length;
+  document.getElementById('s-applied').textContent = tracker.length;
+}
+
+async function checkFollowups(){
+  const due = await fetch(`${API}/api/followups`).then(r=>r.json()).catch(()=>[]);
+  if(due.length){
+    const b = document.getElementById('followup-banner');
+    b.className='followup-banner show';
+    b.innerHTML = `⏰ <strong>${due.length} follow-up(s) due today:</strong> `
+      + due.map(d=>`${d.title} at ${d.company}`).join(' · ');
+  }
+}
+
+function setV(v,btn){
+  vf=v;
+  document.querySelectorAll('.controls .btn:not(.ws):not(.pk)').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); render();
+}
+function setT(t,btn){
+  tf = tf===t ? 'all' : t;
+  document.querySelectorAll('.btn.ws,.btn.pk').forEach(b=>b.classList.remove('active'));
+  if(tf!=='all') btn.classList.add('active');
+  render();
+}
+
+function render(){
+  const q = document.getElementById('search').value.toLowerCase();
+  let jobs = allJobs;
+  if(vf!=='all') jobs=jobs.filter(j=>j.verdict===vf);
+  if(tf!=='all') jobs=jobs.filter(j=>j.job_type===tf);
+  if(q) jobs=jobs.filter(j=>(j.title||'').toLowerCase().includes(q)||(j.company||'').toLowerCase().includes(q)||(j.location||'').toLowerCase().includes(q));
+  document.getElementById('count').textContent = jobs.length+' jobs shown';
+  if(!jobs.length){ document.getElementById('grid').innerHTML='<div class="no-results">No jobs match your filters.</div>'; return; }
+  window._jobs = jobs; document.getElementById('grid').innerHTML = jobs.map((job,i)=>{
+    const sc=Number(job.match_score);
+    const scClass=sc>=80?'sh':sc>=60?'sm':'sl';
+    const applied=isApplied(job);
+    const jt=(job.job_type||'').toLowerCase().replace('-','');
+    const cardClass=job.job_type==='Werkstudent'?'ws':job.job_type==='Praktikum'?'pk':'ft';
+    const typeTag=job.job_type==='Werkstudent'?'tag-ws':job.job_type==='Praktikum'?'tag-pk':'tag-ft';
+    const vTag=job.verdict==='Apply Now'?'tag-apply':job.verdict==='Worth Considering'?'tag-worth':'tag-skip';
+    const matched=(job.matched_skills||'').split(',').map(s=>s.trim()).filter(Boolean);
+    const missing=(job.missing_skills||'').split(',').map(s=>s.trim()).filter(Boolean);
+    const mt=matched.slice(0,4).map(s=>`<span class="sk sk-match">${s}</span>`).join('');
+    const ms=missing.slice(0,3).map(s=>`<span class="sk sk-miss">${s}</span>`).join('');
+    const pub=job.published&&job.published!=='N/A'?`<div style="font-size:11px;color:#bbb;margin-bottom:6px">Posted: ${job.published}</div>`:'';
+    const jobJson=encodeURIComponent(JSON.stringify(job));
+
+    return `<div class="card ${cardClass} ${applied?'applied':''}">
+      <div class="card-top">
+        <div class="job-title">${job.title||'Unknown'}</div>
+        <div class="score ${scClass}">${sc}</div>
+      </div>
+      <div class="company">${job.company||'—'}</div>
+      <div class="location">${job.location||'—'}</div>
+      ${pub}
+      <div class="tags">
+        <span class="tag ${typeTag}">${job.job_type||'—'}</span>
+        <span class="tag ${vTag}">${job.verdict}</span>
+        ${applied?'<span class="tag tag-applied">Applied</span>':''}
+      </div>
+      <div class="reason">${job.reason||''}</div>
+      ${mt?`<div class="skills">${mt}</div>`:''}
+      ${ms?`<div class="skills">${ms}</div>`:''}
+      <div class="actions">
+        <button class='action-btn btn-ats' onclick='openATS(window._jobs[${i}])'>ATS Check</button>
+        ${applied
+          ? `<button class="action-btn btn-applied" disabled>Applied ✓</button>`
+          : `<button class='action-btn btn-email' onclick='openEmail(window._jobs[${i}])'>Generate Email</button>`
+        }
+        ${job.link&&job.link!=='N/A'?`<button class="action-btn btn-link" onclick="window.open('${job.link}','_blank')">View Job</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function openATS(job){
+  currentJob=job;
+  document.getElementById('ats-title').textContent=job.title;
+  document.getElementById('ats-sub').textContent=job.company+' · '+job.location;
+  document.getElementById('ats-content').innerHTML='<span class="loader"></span> Analysing with Groq AI...';
+  document.getElementById('ats-modal').classList.add('open');
+
+  const res = await fetch(`${API}/api/ats`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(job)
+  }).then(r=>r.json()).catch(e=>({error:e.message}));
+
+  if(res.error){ document.getElementById('ats-content').textContent='Error: '+res.error; return; }
+
+  const scoreColor = res.ats_score>=80?'#15803d':res.ats_score>=60?'#d97706':'#b91c1c';
+  document.getElementById('ats-content').innerHTML=`
+    <div class="ats-score" style="color:${scoreColor}">${res.ats_score}<span style="font-size:16px;color:#888">/100</span></div>
+    <p style="font-size:13px;color:#555;margin-bottom:16px">${res.summary||''}</p>
+    <div class="modal-section">
+      <div class="modal-label">Keywords found in your CV</div>
+      <div class="kw-list">${(res.found_keywords||[]).map(k=>`<span class="kw kw-found">${k}</span>`).join('')}</div>
+    </div>
+    <div class="modal-section" style="margin-top:12px">
+      <div class="modal-label">Critical missing keywords — add these</div>
+      <div class="kw-list">${(res.critical_missing||[]).map(k=>`<span class="kw kw-miss">${k}</span>`).join('')}</div>
+    </div>
+    ${res.top_suggestion?`<div class="modal-section" style="margin-top:12px">
+      <div class="modal-label">Top suggestion</div>
+      <div class="modal-content">${res.top_suggestion}</div>
+    </div>`:''}
+  `;
+}
+
+async function openEmail(job){
+  currentJob=job; selectedRecruiter=null;
+  document.getElementById('email-title').textContent=job.title+' at '+job.company;
+  document.getElementById('recruiter-list').innerHTML='<span class="loader"></span> Finding recruiter...';
+  document.getElementById('email-section').style.display='none';
+  document.getElementById('email-actions').style.display='none';
+  document.getElementById('email-modal').classList.add('open');
+
+  const res = await fetch(`${API}/api/recruiter`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(job)
+  }).then(r=>r.json()).catch(()=>({contacts:[],domain:''}));
+
+  const contacts = res.contacts||[];
+  document.getElementById('recruiter-list').innerHTML = contacts.map((c,i)=>`
+    <div class="recruiter-card" id="rc-${i}" onclick="selectRecruiter(${i}, ${JSON.stringify(contacts).replace(/"/g,'&quot;')})">
+      <div class="recruiter-name">${c.name||'Unknown'}</div>
+      <div class="recruiter-email">${c.email}</div>
+      <div class="recruiter-conf">${c.confidence}% confidence</div>
+    </div>
+  `).join('') + `<button class="modal-btn modal-btn-primary" style="margin-top:8px" onclick="generateEmailForSelected()">Generate Email →</button>`;
+}
+
+function selectRecruiter(idx, contacts){
+  selectedRecruiter = contacts[idx];
+  document.querySelectorAll('.recruiter-card').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('rc-'+idx).classList.add('selected');
+}
+
+async function generateEmailForSelected(){
+  if(!selectedRecruiter){ alert('Please select a recruiter first'); return; }
+  document.getElementById('email-section').style.display='none';
+  document.getElementById('recruiter-list').innerHTML += '<br><span class="loader"></span> Writing personalised email...';
+
+  const res = await fetch(`${API}/api/email`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({job:currentJob, recruiter_name:selectedRecruiter.name, recruiter_email:selectedRecruiter.email})
+  }).then(r=>r.json()).catch(e=>({error:e.message}));
+
+  if(res.error){ alert('Error: '+res.error); return; }
+  document.getElementById('email-subject').value = res.subject||'';
+  document.getElementById('email-body').value = res.body||'';
+  document.getElementById('email-section').style.display='block';
+  document.getElementById('email-actions').style.display='flex';
+}
+
+async function regenerateEmail(){
+  if(!selectedRecruiter||!currentJob) return;
+  document.getElementById('email-body').value='Regenerating...';
+  const res = await fetch(`${API}/api/email`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({job:currentJob, recruiter_name:selectedRecruiter.name, recruiter_email:selectedRecruiter.email})
+  }).then(r=>r.json()).catch(e=>({error:e.message}));
+  if(res.error){ alert('Error: '+res.error); return; }
+  document.getElementById('email-subject').value = res.subject||'';
+  document.getElementById('email-body').value = res.body||'';
+}
+
+async function saveAndApply(){
+  if(!currentJob||!selectedRecruiter) return;
+  const res = await fetch(`${API}/api/apply`,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      job: currentJob,
+      recruiter_name: selectedRecruiter.name,
+      recruiter_email: selectedRecruiter.email,
+      notes: `Subject: ${document.getElementById('email-subject').value}`
+    })
+  }).then(r=>r.json()).catch(e=>({error:e.message}));
+
+  if(res.error){ alert('Error: '+res.error); return; }
+  if(res.status==='already_logged'){ alert('Already logged as applied!'); closeModal('email-modal'); return; }
+
+  // Copy email to clipboard
+  const full = `Subject: ${document.getElementById('email-subject').value}\n\nTo: ${selectedRecruiter.email}\n\n${document.getElementById('email-body').value}`;
+  navigator.clipboard.writeText(full).catch(()=>{});
+
+  alert(`Logged as Applied!\nFollow-up reminder set for: ${res.follow_up_date}\n\nEmail copied to clipboard — paste into your email client and send.`);
+  closeModal('email-modal');
+
+  // Refresh tracker and re-render
+  tracker = await fetch(`${API}/api/tracker`).then(r=>r.json()).catch(()=>[]);
+  updateStats();
+  render();
+}
+
+function closeModal(id){
+  document.getElementById(id).classList.remove('open');
+}
+
+window.addEventListener('click', e=>{
+  if(e.target.classList.contains('modal')) {
+    document.querySelectorAll('.modal').forEach(m=>m.classList.remove('open'));
+  }
+});
+
+init();
+</script>
+</body>
+</html>
