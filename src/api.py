@@ -17,7 +17,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from groq import Groq
-from dotenv import load_dotenv
+from dotenv import 
+from src.cover_letter import generate_cover_letter, save_draft as save_cl_draft
 import sys
 sys.path.append(os.path.dirname(__file__))
 from recruiter_finder import find_recruiter
@@ -326,7 +327,288 @@ def get_followups():
         return []
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# PASTE THESE ROUTES INTO src/api.py
+# Add them BEFORE the final "Serve dashboard" section at the bottom of api.py
+# ─────────────────────────────────────────────────────────────────────────────
+# Also add this import at the TOP of api.py with the other imports:
+#   from src.cover_letter import generate_cover_letter, save_draft as save_cl_draft
 
+
+# ── Cover Letter ──────────────────────────────────────────────────────────────
+
+class CoverLetterRequest(BaseModel):
+    job_role:       str
+    company:        str
+    tone:           str = "Cambridge 10/10 framework"
+    language:       str = "English"
+    output_format:  str = "Email body only"
+    recruiter_name: str = ""
+    key_points:     str = ""
+    job_description:str = ""
+    save_draft:     bool = False
+
+
+@app.post("/api/cover_letter")
+async def api_cover_letter(req: CoverLetterRequest, request: Request):
+    """Generate a cover letter using the Cambridge 10/10 framework."""
+    # Load user CV if logged in
+    cv_text = ""
+    token = request.cookies.get("session_token")
+    if token:
+        import sqlite3
+        conn = sqlite3.connect("users.db")
+        c = conn.cursor()
+        c.execute("SELECT cv_text FROM users WHERE email=?", (token,))
+        row = c.fetchone()
+        conn.close()
+        if row and row[0]:
+            cv_text = row[0]
+
+    result = generate_cover_letter(
+        job_role        = req.job_role,
+        company         = req.company,
+        tone            = req.tone,
+        language        = req.language,
+        output_format   = req.output_format,
+        recruiter_name  = req.recruiter_name,
+        key_points      = req.key_points,
+        job_description = req.job_description,
+        resume_text     = cv_text,
+    )
+
+    if result.get("error"):
+        return {"error": result["error"]}
+
+    # Save draft if requested
+    if req.save_draft:
+        save_cl_draft(
+            req.job_role, req.company,
+            result["subject"], result["body"],
+            req.language, req.tone
+        )
+
+    return result
+
+
+@app.get("/api/cover_letter/drafts")
+def get_cover_letter_drafts():
+    """Return list of saved cover letter drafts from outreach_drafts.txt"""
+    drafts = []
+    try:
+        with open("outreach_drafts.txt", "r", encoding="utf-8") as f:
+            content = f.read()
+        blocks = content.strip().split("=" * 55)
+        for block in blocks:
+            block = block.strip()
+            if not block or "COVER LETTER" not in block:
+                continue
+            lines = block.split("\n")
+            draft = {}
+            body_lines = []
+            in_body = False
+            for line in lines:
+                if line.startswith("DATE:"):
+                    draft["date"] = line.replace("DATE:", "").strip()
+                elif line.startswith("JOB:"):
+                    draft["job"] = line.replace("JOB:", "").strip()
+                elif line.startswith("COMPANY:"):
+                    draft["company"] = line.replace("COMPANY:", "").strip()
+                elif line.startswith("TONE:"):
+                    draft["tone"] = line.replace("TONE:", "").strip()
+                elif line.startswith("LANGUAGE:"):
+                    draft["language"] = line.replace("LANGUAGE:", "").strip()
+                elif line.startswith("SUBJECT:"):
+                    draft["subject"] = line.replace("SUBJECT:", "").strip()
+                    in_body = True
+                elif in_body and line:
+                    body_lines.append(line)
+            draft["body"] = "\n".join(body_lines).strip()
+            if draft.get("job"):
+                drafts.append(draft)
+    except FileNotFoundError:
+        pass
+    return list(reversed(drafts))  # newest first
+
+
+# ── Job Summarizer ────────────────────────────────────────────────────────────
+
+@app.post("/api/summarise")
+def summarise_job(req: JobRequest):
+    """Summarise a job and give a quick verdict."""
+    prompt = f"""Summarise this job for a candidate in 4 bullet points.
+Be direct and specific. Tell them exactly what the role involves and whether it's worth applying.
+
+JOB: {req.title} at {req.company} ({req.location})
+TYPE: {req.job_type}
+DESCRIPTION: {req.description[:1500] if req.description else 'Not available'}
+
+Format your response as JSON:
+{{
+  "tldr": "One sentence: what this job actually is",
+  "good_fit": ["reason 1", "reason 2"],
+  "watch_out": ["potential issue 1"],
+  "verdict": "Apply now / Worth a look / Skip",
+  "time_to_apply": "estimated minutes to apply"
+}}
+
+Output valid JSON only."""
+    try:
+        r = client.chat.completions.create(
+            model=MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=300,
+            temperature=0.3,
+        )
+        raw = r.choices[0].message.content.strip().replace("```json","").replace("```","").strip()
+        return json.loads(raw)
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# ── Interview Prep ────────────────────────────────────────────────────────────
+
+class InterviewRequest(BaseModel):
+    prep_type: str   # technical | behavioural | paper | mock | german | takehome
+    job_role:  str = ""
+    company:   str = ""
+
+
+@app.post("/api/interview_prep")
+def interview_prep(req: InterviewRequest):
+    """Generate interview prep content based on type."""
+    resume = load_resume()
+
+    prompts = {
+        "technical": f"""Generate 10 technical ML interview questions for a Werkstudent/intern role.
+Tailor them to this candidate's specific stack.
+
+CANDIDATE: {resume}
+ROLE: {req.job_role or 'ML Werkstudent'}
+
+For each question provide:
+- The question
+- What the interviewer is testing
+- A strong answer based on the candidate's actual projects
+
+Format as JSON array:
+[{{"question": "...", "tests": "...", "answer": "..."}}]
+Output valid JSON only.""",
+
+        "behavioural": f"""Generate 8 behavioural interview questions for a German ML Werkstudent role.
+Use STAR method (Situation, Task, Action, Result).
+
+CANDIDATE: {resume}
+ROLE: {req.job_role or 'ML Werkstudent'} at {req.company or 'German tech company'}
+
+Base answers on real experience from the CV.
+Format as JSON array:
+[{{"question": "...", "star_answer": {{"situation": "...", "task": "...", "action": "...", "result": "..."}}}}]
+Output valid JSON only.""",
+
+        "paper": """Generate 5 questions an interviewer might ask about this paper:
+"Bilingual Speech Translation Between Tamil and Telugu" — AIST-2024, Springer
+DOI: 10.1007/978-3-031-91331-0_8
+Topics: S2UT model, HuBERT, HiFi-GAN, low-resource NLP, unit-to-unit translation
+
+For each question provide a strong, confident answer.
+Format as JSON array:
+[{"question": "...", "answer": "..."}]
+Output valid JSON only.""",
+
+        "german": """Provide guidance for a non-native German speaker (A2 level, English C1)
+interviewing for a Werkstudent ML role at a German company.
+
+Cover:
+1. How to address the German language level question professionally
+2. How to discuss Werkstudent availability (20 hrs/week)
+3. How to handle visa/residence permit questions
+4. German salary expectations for ML Werkstudent (range + how to discuss)
+5. Key cultural differences in German interviews vs Indian/international norms
+6. 3 sample German phrases to use even at A2 level to show effort
+
+Format as JSON:
+{"topics": [{"title": "...", "advice": "...", "example": "..."}]}
+Output valid JSON only.""",
+
+        "takehome": """Describe the 5 most common ML take-home assignment types at German tech companies.
+For each: what they test, typical timeframe, tips for success, and a template structure.
+
+Format as JSON array:
+[{"type": "...", "tests": "...", "timeframe": "...", "tips": ["..."], "template": "..."}]
+Output valid JSON only.""",
+    }
+
+    prompt = prompts.get(req.prep_type)
+    if not prompt:
+        return {"error": f"Unknown prep type: {req.prep_type}"}
+
+    try:
+        r = client.chat.completions.create(
+            model=MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1200,
+            temperature=0.5,
+        )
+        raw = r.choices[0].message.content.strip().replace("```json","").replace("```","").strip()
+        return {"type": req.prep_type, "content": json.loads(raw)}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# ── Follow-up Email ───────────────────────────────────────────────────────────
+
+class FollowUpRequest(BaseModel):
+    title:          str
+    company:        str
+    date_applied:   str
+    recruiter_name: str = ""
+    recruiter_email:str = ""
+
+
+@app.post("/api/followup_email")
+def generate_followup_email(req: FollowUpRequest):
+    """Generate a polite follow-up email for an application."""
+    greeting = f"Dear {req.recruiter_name.split()[0]}" if req.recruiter_name else "Dear Hiring Team"
+    prompt = f"""Write a short, polite follow-up email for a job application.
+
+Role: {req.title}
+Company: {req.company}
+Applied on: {req.date_applied}
+Candidate: Yasaswini Dharmavarapu, M.Sc. AI student at BTU Cottbus
+
+Rules:
+- Start with: {greeting},
+- Maximum 80 words
+- Reference the original application date
+- Ask if there is any update without being pushy
+- End with one sentence showing continued interest
+- Do NOT say "I look forward to hearing from you"
+
+Output only the email body. No subject. No explanation."""
+
+    subj_prompt = f"""Write a follow-up email subject line.
+Original role: {req.title} at {req.company}
+Max 8 words. Professional. Do not start with "Following up on".
+Output only the subject line."""
+
+    try:
+        r1 = client.chat.completions.create(
+            model=MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=200, temperature=0.7,
+        )
+        r2 = client.chat.completions.create(
+            model=MODEL,
+            messages=[{"role": "user", "content": subj_prompt}],
+            max_tokens=25, temperature=0.7,
+        )
+        return {
+            "subject": r2.choices[0].message.content.strip(),
+            "body":    r1.choices[0].message.content.strip(),
+        }
+    except Exception as e:
+        return {"error": str(e)}
 
 # ── Serve dashboard ───────────────────────────────────────────────────────────
 from fastapi.responses import FileResponse
