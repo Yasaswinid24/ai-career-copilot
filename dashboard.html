@@ -1064,14 +1064,70 @@ function refinePitch() {
 }
 
 /* ══ COVER LETTER ══ */
-function generateCoverLetter() {
-  const job = document.getElementById('cl-job').value.trim();
-  if (!job) { alert('Please enter a job role and company.'); return; }
-  const tone = document.getElementById('cl-tone').value;
-  const lang = document.getElementById('cl-lang').value;
-  const points = document.getElementById('cl-points').value.trim();
-  const recruiter = document.getElementById('cl-recruiter').value.trim();
-  alert(`Would generate cover letter for:\n\nJob: ${job}\nTone: ${tone}\nLanguage: ${lang}${points ? '\nEmphasise: ' + points : ''}${recruiter ? '\nRecruiter: ' + recruiter : ''}\n\nIn production, this calls /api/cover_letter`);
+let _lastCLReq = null;
+
+async function generateCoverLetter() {
+  const rawJob = document.getElementById('cl-job').value.trim();
+  if (!rawJob) { alert('Please enter a job role and company.'); return; }
+  let job_role = rawJob, company = '';
+  const m = rawJob.match(/^(.+?)\s+at\s+(.+)$/i);
+  if (m) { job_role = m[1].trim(); company = m[2].trim(); }
+  const req = {
+    job_role, company,
+    tone: document.getElementById('cl-tone').value,
+    language: document.getElementById('cl-lang').value,
+    output_format: 'Email body only',
+    recruiter_name: document.getElementById('cl-recruiter').value.trim(),
+    key_points: document.getElementById('cl-points').value.trim(),
+    save_draft: false,
+  };
+  _lastCLReq = req;
+  document.getElementById('cl-modal-job').textContent = job_role + (company ? ' at ' + company : '');
+  document.getElementById('cl-modal-meta').textContent = req.tone + ' · ' + req.language + ' · generating…';
+  document.getElementById('cl-modal-subject').value = '';
+  document.getElementById('cl-modal-body').value = 'Generating your cover letter…';
+  document.getElementById('cl-modal-status').style.display = 'none';
+  document.getElementById('cl-modal').style.display = 'flex';
+  const btn = document.querySelector('.gen-btn');
+  const orig = btn.innerHTML; btn.disabled = true;
+  btn.innerHTML = '<span class="loader"></span> Generating…';
+  try {
+    const res = await fetch('/api/cover_letter', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(req)
+    }).then(r => r.json());
+    if (res.error) { document.getElementById('cl-modal-body').value = 'Error: ' + res.error; }
+    else {
+      document.getElementById('cl-modal-subject').value = res.subject || '';
+      document.getElementById('cl-modal-body').value = res.body || '';
+      document.getElementById('cl-modal-meta').textContent = res.tone + ' · ' + res.language + ' · ' + res.word_count + ' words';
+    }
+  } catch(e) { document.getElementById('cl-modal-body').value = 'Network error: ' + e.message; }
+  finally { btn.innerHTML = orig; btn.disabled = false; }
+}
+
+function copyCL() {
+  const text = 'Subject: ' + document.getElementById('cl-modal-subject').value + '\n\n' + document.getElementById('cl-modal-body').value;
+  navigator.clipboard.writeText(text).then(() => {
+    const s = document.getElementById('cl-modal-status');
+    s.textContent = '✓ Copied to clipboard!'; s.style.display = 'block';
+    setTimeout(() => s.style.display = 'none', 2500);
+  });
+}
+
+async function saveCLDraft() {
+  if (!_lastCLReq) return;
+  await fetch('/api/cover_letter', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({..._lastCLReq,save_draft:true})});
+  const s = document.getElementById('cl-modal-status');
+  s.textContent = '✓ Draft saved!'; s.style.display = 'block';
+  setTimeout(() => s.style.display = 'none', 2500);
+}
+
+async function regenerateCL() {
+  if (!_lastCLReq) return;
+  document.getElementById('cl-modal-body').value = 'Regenerating…';
+  const res = await fetch('/api/cover_letter', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(_lastCLReq)}).then(r=>r.json());
+  if (!res.error) { document.getElementById('cl-modal-subject').value = res.subject||''; document.getElementById('cl-modal-body').value = res.body||''; }
 }
 
 /* ══ FOLLOW-UP ══ */
@@ -1110,5 +1166,29 @@ window.addEventListener('click', e => {
 
 init();
 </script>
+
+<div id="cl-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--bg2);border-radius:14px;padding:26px;max-width:620px;width:100%;max-height:88vh;overflow-y:auto;position:relative;border:var(--border)">
+    <button onclick="document.getElementById('cl-modal').style.display='none'" style="position:absolute;top:14px;right:14px;background:var(--bg3);border:none;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:16px;color:var(--text2)">✕</button>
+    <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--violet);margin-bottom:5px">Cover Letter</div>
+    <div id="cl-modal-job" style="font-size:15px;font-weight:600;margin-bottom:3px"></div>
+    <div id="cl-modal-meta" style="font-size:11px;color:var(--text3);margin-bottom:18px"></div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:5px">Subject line</div>
+      <input id="cl-modal-subject" type="text" style="width:100%;padding:9px 11px;border:var(--border);border-radius:8px;font-size:13px;outline:none;background:var(--bg2);color:var(--text)">
+    </div>
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:5px">Cover letter</div>
+      <textarea id="cl-modal-body" style="width:100%;padding:10px 11px;border:var(--border);border-radius:8px;font-size:12px;outline:none;resize:vertical;min-height:200px;font-family:inherit;line-height:1.65;background:var(--bg);color:var(--text)"></textarea>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="copyCL()" style="flex:1;padding:9px;border-radius:8px;background:var(--violet);color:white;border:none;font-size:12px;font-weight:500;cursor:pointer">Copy to clipboard</button>
+      <button onclick="saveCLDraft()" style="flex:1;padding:9px;border-radius:8px;background:var(--bg3);color:var(--text2);border:var(--border);font-size:12px;cursor:pointer">Save draft</button>
+      <button onclick="regenerateCL()" style="flex:1;padding:9px;border-radius:8px;background:var(--bg3);color:var(--text2);border:var(--border);font-size:12px;cursor:pointer">Regenerate</button>
+    </div>
+    <div id="cl-modal-status" style="margin-top:10px;font-size:12px;color:var(--mint);display:none"></div>
+  </div>
+</div>
+
 </body>
 </html>
