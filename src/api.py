@@ -111,7 +111,7 @@ class StatusUpdate(BaseModel):
 @app.get("/api/jobs")
 def get_jobs(request: Request):
     try:
-        # Check if user is logged in
+        # Check if user is logged in — serve personalised scores
         token = request.cookies.get("session_token")
         if token:
             import sqlite3
@@ -126,14 +126,24 @@ def get_jobs(request: Request):
                 if scores:
                     return scores
 
-        # Fall back to shared matched_jobs.csv for non-logged-in users
-        df = pd.read_csv("matched_jobs.csv")
-        df = df[~df["verdict"].isin(["Error","API Error"])]
-        df = df.sort_values(
-            ["priority","match_score"],
-            ascending=[True,False]
-        )
-        return df.fillna("").to_dict(orient="records")
+        # Fall back: try matched_jobs.csv first, then raw jobs.csv
+        for fname in ["matched_jobs.csv", "jobs.csv"]:
+            try:
+                df = pd.read_csv(fname)
+                if fname == "matched_jobs.csv":
+                    df = df[~df["verdict"].isin(["Error","API Error"])]
+                    df = df.sort_values(["priority","match_score"], ascending=[True,False])
+                else:
+                    # Raw jobs.csv — no scores yet, sort by freshness
+                    df = df.sort_values(["priority","age_days"], ascending=[True,True])                            if "age_days" in df.columns else df
+                    df["match_score"] = df.get("match_score", 0)
+                    df["verdict"]     = df.get("verdict", "Unscored")
+                    df["reason"]      = df.get("reason", "Not yet scored — run full pipeline")
+                return df.fillna("").to_dict(orient="records")
+            except FileNotFoundError:
+                continue
+
+        return []
     except Exception as e:
         return {"error": str(e)}
 

@@ -643,6 +643,17 @@ async function loadJobs() {
   updateInsights();
 }
 
+async function loadJobsFresh() {
+  // Cache-busting fetch — forces server to re-read jobs.csv
+  try {
+    const jobs = await fetch(`${API}/api/jobs?t=${Date.now()}`, {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache' }
+    }).then(r => r.json());
+    allJobs = Array.isArray(jobs) ? jobs : [];
+  } catch(_) { allJobs = []; }
+}
+
 async function loadTracker() {
   try {
     const apps = await fetch(`${API}/api/tracker`).then(r => r.json());
@@ -1271,8 +1282,15 @@ function startProgressStream(pipeline) {
         if (_timer) clearTimeout(_timer);
         showProgressBar(100, 'Complete! ✓', '', '', pipeline, 'done');
         showToast('✓ ' + (pipeline === 'scrape' ? 'Jobs refreshed!' : 'Pipeline complete!'));
-        await loadJobs();
-        setTimeout(hideProgressBar, 5000);
+        // Wait 2s for file writes to flush, then reload with cache bust
+        setTimeout(async () => {
+          await loadJobsFresh();
+          updateStats();
+          renderJobs();
+          updateInsights();
+          showToast('✓ Dashboard updated — ' + allJobs.length + ' jobs loaded!');
+          setTimeout(hideProgressBar, 4000);
+        }, 2000);
         _sse = null;
       } else if (s.status === 'error') {
         clearInterval(_poll);
