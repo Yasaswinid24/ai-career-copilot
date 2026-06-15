@@ -1050,8 +1050,12 @@ async function uploadCV(input) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cv_text: text })
     }).then(r => r.json());
-    if (res.error) { status.textContent = 'Error: ' + res.error; return; }
-    status.textContent = '';
+    if (res.error) { status.textContent = '✗ Error: ' + res.error; return; }
+    const modeMsg = res.mode === 'user_profile'
+      ? '✓ CV saved to your profile — click Rescore jobs to update matches.'
+      : '✓ CV saved as resume.txt — jobs will use this CV. Sign in with Google to save per-user.';
+    status.textContent = modeMsg;
+    status.style.color = 'var(--mint-text)';
     showCVLoaded();
   } catch(e) { status.textContent = 'Error: ' + e.message; }
 }

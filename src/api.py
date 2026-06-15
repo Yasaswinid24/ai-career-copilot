@@ -623,11 +623,20 @@ def serve_dashboard():
 
 @app.post("/api/cv")
 async def upload_cv(req: dict, request: Request):
+    cv_text = req.get("cv_text", "")
     user = get_current_user(request)
-    if not user:
-        return {"error": "Not logged in"}
-    update_cv(user["id"], req.get("cv_text",""))
-    return {"status": "saved"}
+    if user:
+        # Logged in — save to user profile in DB
+        update_cv(user["id"], cv_text)
+        return {"status": "saved", "mode": "user_profile"}
+    else:
+        # Not logged in — save to shared resume.txt as fallback
+        try:
+            with open("src/resume.txt", "w", encoding="utf-8") as f:
+                f.write(cv_text)
+            return {"status": "saved", "mode": "shared_resume"}
+        except Exception as e:
+            return {"error": str(e)}
 
 
 # ── Per-user CV upload and scoring ────────────────────────────────────────────
