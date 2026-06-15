@@ -17,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from groq import Groq
-from dotenv import 
+from dotenv import load_dotenv
 from src.cover_letter import generate_cover_letter, save_draft as save_cl_draft
 import sys
 sys.path.append(os.path.dirname(__file__))
