@@ -1164,7 +1164,7 @@ async function refreshJobs() {
   if (res.error) { showToast('✗ ' + res.error); return; }
   if (res.status === 'already_running') { showToast('⏳ Already scraping: ' + res.step); return; }
   showToast('⚡ Scraping started!');
-  startPolling('scrape');
+  startProgressStream('scrape');
 }
 
 async function runPipeline() {
@@ -1173,7 +1173,7 @@ async function runPipeline() {
   if (res.error) { showToast('✗ ' + res.error); return; }
   if (res.status === 'already_running') { showToast('⏳ Pipeline already running: ' + res.step); return; }
   showToast('⚡ Full pipeline started!');
-  startPolling('full');
+  startProgressStream('full');
 }
 
 
@@ -1196,70 +1196,100 @@ window.addEventListener('click', e => {
   }
 });
 
-// ── Pipeline status bar ──────────────────────────────
-let _pollInterval = null;
+// ── Live progress bar (SSE) ───────────────────────────
+let _sse = null;
 
-function startPolling(pipeline) {
-  showStatusBar('running', pipeline, 'Starting…');
-  if (_pollInterval) clearInterval(_pollInterval);
-  _pollInterval = setInterval(async () => {
-    try {
-      const data = await fetch('/api/pipeline/status').then(r => r.json());
-      const s = data[pipeline];
-      if (s.status === 'running') {
-        showStatusBar('running', pipeline, s.step);
-      } else if (s.status === 'done') {
-        clearInterval(_pollInterval); _pollInterval = null;
-        showStatusBar('done', pipeline, s.step);
-        showToast('✓ ' + (pipeline === 'scrape' ? 'Jobs refreshed!' : 'Pipeline complete!'));
-        await loadJobs();
-        setTimeout(() => hideStatusBar(), 4000);
-      } else if (s.status === 'error') {
-        clearInterval(_pollInterval); _pollInterval = null;
-        showStatusBar('error', pipeline, s.error);
-        showToast('✗ Pipeline error — check logs');
-      }
-    } catch(e) {}
-  }, 3000);
-}
+function startProgressStream(pipeline) {
+  if (_sse) { _sse.close(); _sse = null; }
+  showProgressBar(0, 'Starting…', '', '', pipeline);
 
-function showStatusBar(status, pipeline, step) {
-  let bar = document.getElementById('pipeline-bar');
-  if (!bar) {
-    bar = document.createElement('div');
-    bar.id = 'pipeline-bar';
-    bar.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:500;padding:12px 24px;font-size:12px;display:flex;align-items:center;gap:12px;transition:all .3s';
-    document.body.appendChild(bar);
-  }
-  const label = pipeline === 'scrape' ? 'Refresh Jobs' : 'Full Pipeline';
-  const colors = {
-    running: 'background:#1a1a2e;color:#a5b4fc;border-top:1px solid #2d2d4e',
-    done:    'background:#052e16;color:#86efac;border-top:1px solid #14532d',
-    error:   'background:#2d0a0a;color:#fca5a5;border-top:1px solid #7f1d1d',
+  _sse = new EventSource('/api/pipeline/stream');
+  _sse.onmessage = async (e) => {
+    const data = JSON.parse(e.data);
+    const p    = data.progress;
+    const s    = data[pipeline];
+
+    if (p.stage === 'done') {
+      showProgressBar(100, 'Complete! ✓', '', '', pipeline, 'done');
+      showToast('✓ ' + (pipeline === 'scrape' ? 'Jobs refreshed!' : 'Pipeline complete!'));
+      _sse.close(); _sse = null;
+      await loadJobs();
+      setTimeout(hideProgressBar, 4000);
+      return;
+    }
+    if (p.stage === 'error') {
+      showProgressBar(0, p.error || 'Error', '', '', pipeline, 'error');
+      showToast('✗ Pipeline error');
+      _sse.close(); _sse = null;
+      return;
+    }
+    if (s && s.status === 'done') {
+      showProgressBar(100, 'Complete! ✓', '', '', pipeline, 'done');
+      _sse.close(); _sse = null;
+      await loadJobs();
+      setTimeout(hideProgressBar, 4000);
+      return;
+    }
+
+    showProgressBar(p.pct || 0, p.stage_label || s?.step || '…',
+                    p.current_job, p.current_co, pipeline);
   };
-  bar.style.cssText = bar.style.cssText.replace(/background:[^;]+;color:[^;]+;border-top:[^']+/, '');
-  bar.setAttribute('style', bar.style.cssText + ';' + (colors[status] || colors.running));
-  bar.innerHTML = status === 'running'
-    ? `<span class="loader"></span><strong>${label}:</strong> ${step || '…'}<button onclick="hideStatusBar()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:inherit;opacity:.6;font-size:16px">✕</button>`
-    : status === 'done'
-    ? `<span style="font-size:16px">✅</span><strong>${label}:</strong> ${step}<button onclick="hideStatusBar()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:inherit;opacity:.6;font-size:16px">✕</button>`
-    : `<span style="font-size:16px">❌</span><strong>${label} error:</strong> ${step}<button onclick="hideStatusBar()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:inherit;opacity:.6;font-size:16px">✕</button>`;
+
+  _sse.onerror = () => {
+    // SSE closed by server (pipeline done) — reload jobs
+    if (_sse) { _sse.close(); _sse = null; }
+  };
 }
 
-function hideStatusBar() {
-  const bar = document.getElementById('pipeline-bar');
-  if (bar) bar.remove();
-  if (_pollInterval) { clearInterval(_pollInterval); _pollInterval = null; }
+function showProgressBar(pct, label, job, company, pipeline, state) {
+  let wrap = document.getElementById('progress-wrap');
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.id = 'progress-wrap';
+    wrap.style.cssText = `
+      position:fixed;bottom:0;left:0;right:0;z-index:500;
+      background:#fff;border-top:1px solid #e8e8e8;
+      padding:14px 24px 14px calc(220px + 24px);
+      box-shadow:0 -4px 20px rgba(0,0,0,0.08);
+      font-size:12px;transition:transform .3s;
+    `;
+    document.body.appendChild(wrap);
+  }
+
+  const pipelineLabel = pipeline === 'scrape' ? 'Refresh Jobs' : 'Full Pipeline';
+  const isDone  = state === 'done';
+  const isError = state === 'error';
+  const barColor = isDone ? '#0F6E56' : isError ? '#A32D2D' : '#534AB7';
+  const icon = isDone ? '✅' : isError ? '❌' : '';
+
+  wrap.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+      ${!isDone && !isError ? '<span class="loader"></span>' : `<span>${icon}</span>`}
+      <strong style="color:#1a1a1a">${pipelineLabel}</strong>
+      <span style="color:#555">${label}</span>
+      ${job ? `<span style="color:#999;margin-left:4px">— ${job}${company ? ' @ ' + company : ''}</span>` : ''}
+      <span style="margin-left:auto;font-weight:600;color:${barColor};font-variant-numeric:tabular-nums">${pct}%</span>
+      <button onclick="hideProgressBar()" style="background:none;border:none;cursor:pointer;color:#999;font-size:18px;line-height:1;padding:0 4px">✕</button>
+    </div>
+    <div style="height:6px;background:#f0f0eb;border-radius:3px;overflow:hidden">
+      <div style="height:100%;width:${pct}%;background:${barColor};border-radius:3px;transition:width .4s ease"></div>
+    </div>
+    ${job ? `<div style="font-size:11px;color:#999;margin-top:5px">Currently processing: <strong style="color:#555">${job}</strong>${company ? ' at ' + company : ''}</div>` : ''}
+  `;
 }
 
-// Re-attach pipeline status on page load (in case page refreshed mid-run)
+function hideProgressBar() {
+  const w = document.getElementById('progress-wrap');
+  if (w) w.remove();
+  if (_sse) { _sse.close(); _sse = null; }
+}
+
 async function checkPipelineOnLoad() {
   try {
     const data = await fetch('/api/pipeline/status').then(r => r.json());
     for (const key of ['scrape', 'full']) {
       if (data[key].status === 'running') {
-        showStatusBar('running', key, data[key].step);
-        startPolling(key);
+        startProgressStream(key);
         break;
       }
     }
