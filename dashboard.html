@@ -1155,8 +1155,40 @@ function improveCV() { alert('Would analyse your CV and suggest specific improve
 function tailorCV() { alert('Would ask which job to tailor your CV for, then generate tailored Profile Summary and Skills.'); }
 
 /* ══ TOPBAR ACTIONS ══ */
-function refreshJobs() { alert('Would run: scraper.py + freshness_check.py + eligibility_checker.py'); }
-function runPipeline() { alert('Would run full pipeline: scrape → filter → score → push to GitHub'); }
+async function refreshJobs() {
+  const btn = document.querySelector('.tbtn:not(.primary)');
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<span class="loader"></span> Scraping…';
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/pipeline/scrape', {method:'POST'}).then(r => r.json());
+    if (res.error) { alert('Error: ' + res.error); return; }
+    showToast('⚡ ' + res.message);
+    // Poll for new jobs after 3 minutes
+    setTimeout(async () => {
+      await loadJobs();
+      showToast('✓ Jobs refreshed!');
+    }, 180000);
+  } catch(e) { alert('Error: ' + e.message); }
+  finally { btn.innerHTML = orig; btn.disabled = false; }
+}
+async function runPipeline() {
+  if (!confirm('Run full pipeline?\n\n1. Scrape fresh jobs\n2. Freshness filter\n3. Eligibility filter\n4. RAG score against your CV\n\nThis takes ~10 minutes.')) return;
+  const btn = document.querySelector('.tbtn.primary');
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<span class="loader"></span> Running…';
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/pipeline/full', {method:'POST'}).then(r => r.json());
+    if (res.error) { alert('Error: ' + res.error); return; }
+    showToast('⚡ ' + res.message);
+    setTimeout(async () => {
+      await loadJobs();
+      showToast('✓ Pipeline complete! Jobs updated.');
+    }, 600000);
+  } catch(e) { alert('Error: ' + e.message); }
+  finally { btn.innerHTML = orig; btn.disabled = false; }
+}
 
 /* ══ NAV ══ */
 function showTab(tab, el) {
@@ -1176,6 +1208,20 @@ window.addEventListener('click', e => {
     document.querySelectorAll('.modal').forEach(m => m.classList.remove('open'));
   }
 });
+
+function showToast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:white;padding:10px 20px;border-radius:8px;font-size:13px;z-index:999;transition:opacity .3s;box-shadow:0 4px 20px rgba(0,0,0,0.2)';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._hide);
+  t._hide = setTimeout(() => t.style.opacity = '0', 3500);
+}
 
 init();
 </script>

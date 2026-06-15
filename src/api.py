@@ -704,3 +704,35 @@ async def score_cv_for_user(request: Request):
         return {"error": "Scoring failed"}
     except Exception as e:
         return {"error": str(e)}
+
+# ── Pipeline triggers ─────────────────────────────────────────────────────────
+
+import subprocess, threading
+
+def run_script_bg(scripts: list):
+    """Run a list of python scripts sequentially in background."""
+    def _run():
+        for script in scripts:
+            subprocess.run(["python3", script], cwd=os.path.dirname(os.path.abspath(".")))
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+
+@app.post("/api/pipeline/scrape")
+def trigger_scrape():
+    """Scrape fresh jobs + freshness check + eligibility filter."""
+    try:
+        run_script_bg(["src/scraper.py", "src/freshness_check.py", "src/eligibility_checker.py"])
+        return {"status": "started", "message": "Scraping started in background. Refresh jobs in ~3 minutes."}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/pipeline/full")
+def trigger_full_pipeline(request: Request):
+    """Full pipeline: scrape + filter + RAG score."""
+    try:
+        token = request.cookies.get("session_token")
+        scripts = ["src/scraper.py", "src/freshness_check.py", "src/eligibility_checker.py", "src/rag_matcher.py"]
+        run_script_bg(scripts)
+        return {"status": "started", "message": "Full pipeline started. Check back in ~10 minutes."}
+    except Exception as e:
+        return {"error": str(e)}
