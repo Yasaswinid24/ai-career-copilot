@@ -707,32 +707,83 @@ async def score_cv_for_user(request: Request):
 
 # ── Pipeline triggers ─────────────────────────────────────────────────────────
 
-import subprocess, threading
+import subprocess, threading, time as _time
 
-def run_script_bg(scripts: list):
-    """Run a list of python scripts sequentially in background."""
+# In-memory pipeline state
+_pipeline_state = {
+    "scrape":  {"status": "idle", "step": "", "started_at": None, "finished_at": None, "error": None},
+    "full":    {"status": "idle", "step": "", "started_at": None, "finished_at": None, "error": None},
+}
+
+SCRAPE_STEPS = [
+    ("src/scraper.py",             "Scraping jobs from Arbeitsagentur…"),
+    ("src/freshness_check.py",     "Removing stale jobs (>14 days)…"),
+    ("src/eligibility_checker.py", "Filtering ineligible roles…"),
+]
+
+FULL_STEPS = [
+    ("src/scraper.py",             "Scraping jobs from Arbeitsagentur…"),
+    ("src/freshness_check.py",     "Removing stale jobs (>14 days)…"),
+    ("src/eligibility_checker.py", "Filtering ineligible roles…"),
+    ("src/rag_matcher.py",         "RAG scoring jobs against your CV…"),
+]
+
+def run_pipeline_bg(pipeline_key: str, steps: list):
+    """Run pipeline steps sequentially, updating state at each step."""
+    state = _pipeline_state[pipeline_key]
+    state["status"]      = "running"
+    state["started_at"]  = _time.strftime("%H:%M:%S")
+    state["finished_at"] = None
+    state["error"]       = None
+
     def _run():
-        for script in scripts:
-            subprocess.run(["python3", script], cwd=os.path.dirname(os.path.abspath(".")))
+        try:
+            for script, label in steps:
+                state["step"] = label
+                result = subprocess.run(
+                    ["python3", script],
+                    capture_output=True, text=True,
+                    cwd=os.path.dirname(os.path.abspath(__file__)) + "/.."
+                )
+                if result.returncode != 0:
+                    state["status"] = "error"
+                    state["error"]  = f"{script} failed: {result.stderr[-300:] if result.stderr else 'unknown error'}"
+                    state["step"]   = ""
+                    return
+            state["status"]      = "done"
+            state["step"]        = "Complete!"
+            state["finished_at"] = _time.strftime("%H:%M:%S")
+        except Exception as e:
+            state["status"] = "error"
+            state["error"]  = str(e)
+            state["step"]   = ""
+
     t = threading.Thread(target=_run, daemon=True)
     t.start()
 
+
 @app.post("/api/pipeline/scrape")
 def trigger_scrape():
-    """Scrape fresh jobs + freshness check + eligibility filter."""
-    try:
-        run_script_bg(["src/scraper.py", "src/freshness_check.py", "src/eligibility_checker.py"])
-        return {"status": "started", "message": "Scraping started in background. Refresh jobs in ~3 minutes."}
-    except Exception as e:
-        return {"error": str(e)}
+    state = _pipeline_state["scrape"]
+    if state["status"] == "running":
+        return {"status": "already_running", "message": "Scrape already in progress.", "step": state["step"]}
+    run_pipeline_bg("scrape", SCRAPE_STEPS)
+    return {"status": "started", "message": "Scraping started!"}
+
 
 @app.post("/api/pipeline/full")
 def trigger_full_pipeline(request: Request):
-    """Full pipeline: scrape + filter + RAG score."""
-    try:
-        token = request.cookies.get("session_token")
-        scripts = ["src/scraper.py", "src/freshness_check.py", "src/eligibility_checker.py", "src/rag_matcher.py"]
-        run_script_bg(scripts)
-        return {"status": "started", "message": "Full pipeline started. Check back in ~10 minutes."}
-    except Exception as e:
-        return {"error": str(e)}
+    state = _pipeline_state["full"]
+    if state["status"] == "running":
+        return {"status": "already_running", "message": "Pipeline already running.", "step": state["step"]}
+    run_pipeline_bg("full", FULL_STEPS)
+    return {"status": "started", "message": "Full pipeline started!"}
+
+
+@app.get("/api/pipeline/status")
+def get_pipeline_status():
+    """Poll this to get live status of both pipelines."""
+    return {
+        "scrape": _pipeline_state["scrape"],
+        "full":   _pipeline_state["full"],
+    }

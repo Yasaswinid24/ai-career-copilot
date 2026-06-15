@@ -1156,39 +1156,22 @@ function tailorCV() { alert('Would ask which job to tailor your CV for, then gen
 
 /* ══ TOPBAR ACTIONS ══ */
 async function refreshJobs() {
-  const btn = document.querySelector('.tbtn:not(.primary)');
-  const orig = btn.innerHTML;
-  btn.innerHTML = '<span class="loader"></span> Scraping…';
-  btn.disabled = true;
-  try {
-    const res = await fetch('/api/pipeline/scrape', {method:'POST'}).then(r => r.json());
-    if (res.error) { alert('Error: ' + res.error); return; }
-    showToast('⚡ ' + res.message);
-    // Poll for new jobs after 3 minutes
-    setTimeout(async () => {
-      await loadJobs();
-      showToast('✓ Jobs refreshed!');
-    }, 180000);
-  } catch(e) { alert('Error: ' + e.message); }
-  finally { btn.innerHTML = orig; btn.disabled = false; }
+  const res = await fetch('/api/pipeline/scrape', {method:'POST'}).then(r=>r.json()).catch(e=>({error:e.message}));
+  if (res.error) { showToast('✗ ' + res.error); return; }
+  if (res.status === 'already_running') { showToast('⏳ Already scraping: ' + res.step); return; }
+  showToast('⚡ Scraping started!');
+  startPolling('scrape');
 }
+
 async function runPipeline() {
   if (!confirm('Run full pipeline?\n\n1. Scrape fresh jobs\n2. Freshness filter\n3. Eligibility filter\n4. RAG score against your CV\n\nThis takes ~10 minutes.')) return;
-  const btn = document.querySelector('.tbtn.primary');
-  const orig = btn.innerHTML;
-  btn.innerHTML = '<span class="loader"></span> Running…';
-  btn.disabled = true;
-  try {
-    const res = await fetch('/api/pipeline/full', {method:'POST'}).then(r => r.json());
-    if (res.error) { alert('Error: ' + res.error); return; }
-    showToast('⚡ ' + res.message);
-    setTimeout(async () => {
-      await loadJobs();
-      showToast('✓ Pipeline complete! Jobs updated.');
-    }, 600000);
-  } catch(e) { alert('Error: ' + e.message); }
-  finally { btn.innerHTML = orig; btn.disabled = false; }
+  const res = await fetch('/api/pipeline/full', {method:'POST'}).then(r=>r.json()).catch(e=>({error:e.message}));
+  if (res.error) { showToast('✗ ' + res.error); return; }
+  if (res.status === 'already_running') { showToast('⏳ Pipeline already running: ' + res.step); return; }
+  showToast('⚡ Full pipeline started!');
+  startPolling('full');
 }
+
 
 /* ══ NAV ══ */
 function showTab(tab, el) {
@@ -1209,6 +1192,76 @@ window.addEventListener('click', e => {
   }
 });
 
+// ── Pipeline status bar ──────────────────────────────
+let _pollInterval = null;
+
+function startPolling(pipeline) {
+  showStatusBar('running', pipeline, 'Starting…');
+  if (_pollInterval) clearInterval(_pollInterval);
+  _pollInterval = setInterval(async () => {
+    try {
+      const data = await fetch('/api/pipeline/status').then(r => r.json());
+      const s = data[pipeline];
+      if (s.status === 'running') {
+        showStatusBar('running', pipeline, s.step);
+      } else if (s.status === 'done') {
+        clearInterval(_pollInterval); _pollInterval = null;
+        showStatusBar('done', pipeline, s.step);
+        showToast('✓ ' + (pipeline === 'scrape' ? 'Jobs refreshed!' : 'Pipeline complete!'));
+        await loadJobs();
+        setTimeout(() => hideStatusBar(), 4000);
+      } else if (s.status === 'error') {
+        clearInterval(_pollInterval); _pollInterval = null;
+        showStatusBar('error', pipeline, s.error);
+        showToast('✗ Pipeline error — check logs');
+      }
+    } catch(e) {}
+  }, 3000);
+}
+
+function showStatusBar(status, pipeline, step) {
+  let bar = document.getElementById('pipeline-bar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'pipeline-bar';
+    bar.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:500;padding:12px 24px;font-size:12px;display:flex;align-items:center;gap:12px;transition:all .3s';
+    document.body.appendChild(bar);
+  }
+  const label = pipeline === 'scrape' ? 'Refresh Jobs' : 'Full Pipeline';
+  const colors = {
+    running: 'background:#1a1a2e;color:#a5b4fc;border-top:1px solid #2d2d4e',
+    done:    'background:#052e16;color:#86efac;border-top:1px solid #14532d',
+    error:   'background:#2d0a0a;color:#fca5a5;border-top:1px solid #7f1d1d',
+  };
+  bar.style.cssText = bar.style.cssText.replace(/background:[^;]+;color:[^;]+;border-top:[^']+/, '');
+  bar.setAttribute('style', bar.style.cssText + ';' + (colors[status] || colors.running));
+  bar.innerHTML = status === 'running'
+    ? `<span class="loader"></span><strong>${label}:</strong> ${step || '…'}<button onclick="hideStatusBar()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:inherit;opacity:.6;font-size:16px">✕</button>`
+    : status === 'done'
+    ? `<span style="font-size:16px">✅</span><strong>${label}:</strong> ${step}<button onclick="hideStatusBar()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:inherit;opacity:.6;font-size:16px">✕</button>`
+    : `<span style="font-size:16px">❌</span><strong>${label} error:</strong> ${step}<button onclick="hideStatusBar()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:inherit;opacity:.6;font-size:16px">✕</button>`;
+}
+
+function hideStatusBar() {
+  const bar = document.getElementById('pipeline-bar');
+  if (bar) bar.remove();
+  if (_pollInterval) { clearInterval(_pollInterval); _pollInterval = null; }
+}
+
+// Re-attach pipeline status on page load (in case page refreshed mid-run)
+async function checkPipelineOnLoad() {
+  try {
+    const data = await fetch('/api/pipeline/status').then(r => r.json());
+    for (const key of ['scrape', 'full']) {
+      if (data[key].status === 'running') {
+        showStatusBar('running', key, data[key].step);
+        startPolling(key);
+        break;
+      }
+    }
+  } catch(_) {}
+}
+
 function showToast(msg) {
   let t = document.getElementById('toast');
   if (!t) {
@@ -1224,6 +1277,7 @@ function showToast(msg) {
 }
 
 init();
+checkPipelineOnLoad();
 </script>
 
 <div id="cl-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300;align-items:center;justify-content:center;padding:20px">
