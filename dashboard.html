@@ -1201,44 +1201,92 @@ let _sse = null;
 
 function startProgressStream(pipeline) {
   if (_sse) { _sse.close(); _sse = null; }
-  showProgressBar(0, 'Starting…', '', '', pipeline);
 
-  _sse = new EventSource('/api/pipeline/stream');
-  _sse.onmessage = async (e) => {
-    const data = JSON.parse(e.data);
-    const p    = data.progress;
-    const s    = data[pipeline];
+  // Scrape pipeline steps with time estimates (seconds)
+  const scrapeSteps = [
+    { pct: 5,  label: 'Connecting to Arbeitsagentur API…' },
+    { pct: 15, label: 'Searching Werkstudent ML roles…' },
+    { pct: 25, label: 'Searching Praktikum AI roles…' },
+    { pct: 35, label: 'Searching Full-time Data Science roles…' },
+    { pct: 42, label: 'Deduplicating results…' },
+    { pct: 48, label: 'Filtering jobs older than 7 days…' },
+    { pct: 52, label: 'Running eligibility check on titles…' },
+    { pct: 57, label: 'Fetching job descriptions — this takes a few minutes…' },
+    { pct: 65, label: 'Fetching JDs (20/80)…' },
+    { pct: 72, label: 'Fetching JDs (40/80)…' },
+    { pct: 80, label: 'Fetching JDs (60/80)…' },
+    { pct: 88, label: 'Fetching JDs (80/80)…' },
+    { pct: 93, label: 'Saving jobs.csv…' },
+    { pct: 97, label: 'Almost done…' },
+  ];
 
-    if (p.stage === 'done') {
-      showProgressBar(100, 'Complete! ✓', '', '', pipeline, 'done');
-      showToast('✓ ' + (pipeline === 'scrape' ? 'Jobs refreshed!' : 'Pipeline complete!'));
-      _sse.close(); _sse = null;
-      await loadJobs();
-      setTimeout(hideProgressBar, 4000);
-      return;
+  const fullSteps = [
+    { pct: 3,  label: 'Connecting to Arbeitsagentur API…' },
+    { pct: 10, label: 'Searching Werkstudent ML roles…' },
+    { pct: 18, label: 'Searching Praktikum AI roles…' },
+    { pct: 25, label: 'Deduplicating & filtering…' },
+    { pct: 30, label: 'Running eligibility check…' },
+    { pct: 35, label: 'Fetching job descriptions…' },
+    { pct: 48, label: 'Fetching JDs (30/80)…' },
+    { pct: 58, label: 'Fetching JDs (60/80)…' },
+    { pct: 65, label: 'JD fetch complete — starting RAG scoring…' },
+    { pct: 70, label: 'Building CV vector index (FAISS)…' },
+    { pct: 75, label: 'Scoring jobs against your CV (1/4)…' },
+    { pct: 82, label: 'Scoring jobs against your CV (2/4)…' },
+    { pct: 88, label: 'Scoring jobs against your CV (3/4)…' },
+    { pct: 94, label: 'Finalising scores & saving…' },
+    { pct: 97, label: 'Almost done…' },
+  ];
+
+  const steps = pipeline === 'scrape' ? scrapeSteps : fullSteps;
+  const totalMs = pipeline === 'scrape' ? 240000 : 600000; // 4 min or 10 min
+  let stepIdx = 0;
+  let _timer = null;
+
+  showProgressBar(2, 'Starting…', '', '', pipeline);
+
+  // Advance through estimated steps over total time
+  function advanceStep() {
+    if (stepIdx >= steps.length) return;
+    const step = steps[stepIdx];
+    showProgressBar(step.pct, step.label, '', '', pipeline);
+    stepIdx++;
+    if (stepIdx < steps.length) {
+      const nextStep = steps[stepIdx];
+      const delay = ((nextStep.pct - step.pct) / 100) * totalMs;
+      _timer = setTimeout(advanceStep, delay);
     }
-    if (p.stage === 'error') {
-      showProgressBar(0, p.error || 'Error', '', '', pipeline, 'error');
-      showToast('✗ Pipeline error');
-      _sse.close(); _sse = null;
-      return;
-    }
-    if (s && s.status === 'done') {
-      showProgressBar(100, 'Complete! ✓', '', '', pipeline, 'done');
-      _sse.close(); _sse = null;
-      await loadJobs();
-      setTimeout(hideProgressBar, 4000);
-      return;
-    }
+  }
+  setTimeout(advanceStep, 800);
 
-    showProgressBar(p.pct || 0, p.stage_label || s?.step || '…',
-                    p.current_job, p.current_co, pipeline);
-  };
+  // Poll every 4 seconds to detect real completion
+  _sse = { close: () => { if(_timer) clearTimeout(_timer); if(_poll) clearInterval(_poll); } };
+  const _poll = setInterval(async () => {
+    try {
+      const data = await fetch('/api/pipeline/status').then(r => r.json());
+      const s = data[pipeline];
 
-  _sse.onerror = () => {
-    // SSE closed by server (pipeline done) — reload jobs
-    if (_sse) { _sse.close(); _sse = null; }
-  };
+      if (s.status === 'done') {
+        clearInterval(_poll);
+        if (_timer) clearTimeout(_timer);
+        showProgressBar(100, 'Complete! ✓', '', '', pipeline, 'done');
+        showToast('✓ ' + (pipeline === 'scrape' ? 'Jobs refreshed!' : 'Pipeline complete!'));
+        await loadJobs();
+        setTimeout(hideProgressBar, 5000);
+        _sse = null;
+      } else if (s.status === 'error') {
+        clearInterval(_poll);
+        if (_timer) clearTimeout(_timer);
+        showProgressBar(0, s.error || 'Pipeline error', '', '', pipeline, 'error');
+        showToast('✗ Pipeline failed — check Render logs');
+        _sse = null;
+      } else if (s.status === 'running' && s.step) {
+        // Override label with real step from backend if available
+        const currentStep = steps[Math.max(0, stepIdx - 1)];
+        showProgressBar(currentStep?.pct || 10, s.step, '', '', pipeline);
+      }
+    } catch(e) {}
+  }, 4000);
 }
 
 function showProgressBar(pct, label, job, company, pipeline, state) {
