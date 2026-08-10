@@ -1,62 +1,119 @@
 Yasaswini Dharmavarapu
-M.Sc. Artificial Intelligence, BTU Cottbus (2025-2027)
-B.Tech Computer Science, Amrita School of Computing (2020-2024), CGPA: 7.2/10
+yasaswani.dharmavarapu@gmail.com | +49 15510540988
+linkedin.com/in/yasaswiniD | github.com/Yassu-24
 Based in Cottbus, Germany. Available 20 hrs/week as Werkstudent.
 
 PROFILE:
-Published Springer researcher (AIST-2024), ML intern at Fractal Analytics,
-and active BTU Research Assistant. Builds end-to-end ML pipelines across NLP,
-deep learning, computer vision, speech processing, and agentic LLM systems.
-Seeking Werkstudent or ML internship in Germany.
+M.Sc. Artificial Intelligence student at BTU Cottbus with a published
+conference paper (AIST-2024, Springer), full-time industry experience in
+healthcare AI, and an active research role in Music AI. Specialises in NLP,
+LLMs, speech AI, and end-to-end ML systems. Progressed from AI/ML Intern to
+Software Engineer at Availity, building production features that reduced
+physician documentation time by 25 minutes per doctor using Whisper,
+Wav2Vec2, LangChain, and GPT-4 prompt engineering. Seeking a Werkstudent or
+ML internship role in Germany.
 
 SKILLS:
-Programming: Python, SQL, C, JavaScript
-ML & Data: scikit-learn, Pandas, NumPy, Matplotlib, Seaborn
+Languages: Python, SQL, C, JavaScript
+ML & Data: scikit-learn, Pandas, NumPy, Matplotlib, Seaborn, REST APIs
 Deep Learning: TensorFlow, Keras, PyTorch, CNN, LSTM, Transformer architectures
-NLP & LLMs: BERT, DistilBERT, XLM-RoBERTa, Hugging Face Transformers, RAG, NER, CRF
-LLM Engineering: LangGraph, LangChain, Groq API, FAISS vector search, structured prompting
-Speech & Vision: HuBERT, HiFi-GAN, OpenCV, ADAS-applicable computer vision
-Tools & DevOps: Git, GitHub, Docker, FastAPI, Linux, Jupyter Notebook, REST APIs, Python APIs
+NLP & LLMs: BERT, DistilBERT, XLM-RoBERTa, Hugging Face Transformers,
+  LangChain, GPT-4, Claude APIs, Prompt Engineering, TF-IDF, NER, CRF
+Speech & Vision: Whisper, Wav2Vec2, HuBERT, HiFi-GAN, OpenCV
+Tools & DevOps: Git, GitHub, Docker, Linux, Jupyter Notebook, Google Colab
+Data Engineering & BI: PostgreSQL, SQL data warehouse modelling
+  (fact/dimension star schema), ETL pipelines, Power BI, AWS RDS
+Web & Backend: FastAPI, Node.js, Express, MongoDB, REST APIs, CI/CD
 
 EXPERIENCE:
-- Academic Research Assistant, BTU Cottbus (Feb 2026 - Ongoing)
-  Deep learning pipeline for music synthesis and audio pattern recognition
-  Automated MFCC and spectrogram feature extraction using PyTorch and Librosa
-  Reduced data preparation time by 50%
-  Tools: Python, PyTorch, Librosa, Git, Jupyter Notebook
 
-- Machine Learning Intern, Fractal Analytics (June 2023 - Aug 2023)
-  Fine-tuned BERT on 500+ employee feedback records, 95%+ accuracy
-  Automated preprocessing pipeline, reduced manual work by 65%
-  Tools: Python, BERT, Pandas, scikit-learn, Git, Jupyter Notebook
+- CRM Systems & Full-Stack Automation Engineer (Freelance/Contract)
+  Kilimis Mentoring (Doing Together), Cottbus, Germany (Mar 2026 - Present)
+  Built a full-stack task-tracking web app ("Action Plan App") from scratch:
+    JavaScript/HTML/CSS, Node.js/Express, MongoDB Atlas, CI/CD via Render
+    auto-deploy, so the client can share and track action plans with customers
+  Built and debugged a webhook integration syncing LatePoint bookings into
+    Zoho Bigin CRM via Zoho Flow, fixing a field-mapping bug for reliable
+    real-time sync
+  Designed the end-to-end Zoho Bigin CRM pipeline (lead stages, custom
+    fields, rule-based automations), improving lead-to-client conversion
+    tracking
+  Delivered weekly status reports to the business owner
 
-PUBLICATION:
-Bilingual Speech Translation Between Tamil and Telugu (AIST-2024, Springer)
-DOI: 10.1007/978-3-031-91331-0_8
-Low-resource multilingual NLP, S2UT model, HuBERT, HiFi-GAN, PyTorch
+- Academic Research Assistant
+  Brandenburg University of Technology (BTU) Cottbus (Feb 2026 - Present)
+  Designed and implemented a deep learning research pipeline for music
+    synthesis and audio pattern recognition using PyTorch, establishing a
+    reproducible framework now used as the foundation for ongoing
+    faculty-supervised Music AI publications
+  Built automated audio feature extraction workflows (MFCCs, spectrograms)
+    using Python and Librosa, reducing data preparation time by over 50%
+
+- Associate Software Engineer
+  Availity (June 2024 - March 2025)
+  AI Clinical Copilot, full ownership: end-to-end engineering responsibility
+    for ICD-10 code recommendation, drug interaction warning, and treatment
+    pathway suggestion features using GPT-4 prompt engineering and LangChain
+    pipelines in a production healthcare environment
+  Prompt engineering at scale: designed, iterated and maintained structured
+    GPT-4 prompts for clinical decision support; systematic evaluation of
+    model outputs against clinical benchmarks before deployment
+
+- AI & ML Intern
+  Availity (Jan 2024 - June 2024)
+  Voice-to-structured EMR pipeline: real-time speech-to-text using Whisper
+    and Wav2Vec2, transcribing physician speech into structured EMR fields,
+    eliminating manual data entry after consultations
+  AI doctor note generation: LLM-powered auto-note generation with LangChain
+    and OpenAI, transforming transcribed speech into clinically accurate SOAP
+    notes, reducing physician documentation time by ~25 minutes per session
+
+- Machine Learning Intern
+  Fractal Analytics (June 2023 - Aug 2023)
+  Fine-tuned BERT on domain-specific employee feedback to classify sentiment,
+    95%+ accuracy across 500+ employee records; insights informed leadership
+    strategy changes
+  Automated the data cleaning and preprocessing pipeline using Python
+    (Pandas, regex, custom validators), reducing manual processing time by 65%
 
 PROJECTS:
-1. AI Career Copilot - LIVE at ai-career-copilot-0b72.onrender.com
-   Tools: Python, LangGraph, LangChain, Groq API, FAISS, FastAPI, Docker,
-   Hugging Face, REST APIs, Git, GitHub, Linux, Pandas, BeautifulSoup
-   Production agentic AI system with RAG, multi-agent pipeline, human-in-the-loop
-   Deployed on Render with FastAPI backend, Docker containerisation
 
-2. Job Application Email Classification
-   Tools: Python, PyTorch, TensorFlow, XLM-RoBERTa, Hugging Face, scikit-learn, Git, Jupyter
-   AUC 0.95, CNN vs transformer benchmarking, 8 F1 points improvement
+1. AI Career Copilot - Agentic Multi-Agent Job Discovery System
+   github.com/Yassu-24/ai-career-copilot
+   Multi-agent job discovery system with LangGraph, orchestrating agents for
+     job discovery, resume matching and application evaluation
+   Integrated LLM APIs (Groq, Hugging Face) with RAG (FAISS) and ATS keyword
+     analysis, managing prompt design and token limits
+   Shipped via FastAPI + Google OAuth, containerised with Docker, deployed to
+     production on Render
+   Tools: Python, LangGraph, LangChain, Groq API, FAISS, FastAPI, Docker
 
-3. Multilingual Speech Translation (basis of AIST-2024 publication)
-   Tools: Python, PyTorch, HuBERT, HiFi-GAN, Git, GPU infrastructure, Linux
-   Real-time ASR+MT+TTS pipeline, applicable to multilingual enterprise systems
+2. Job Market Analytics Pipeline
+   End-to-end ETL pipeline: automated ingestion from the Bundesagentur fuer
+     Arbeit REST API, dimensional modelling in a PostgreSQL star schema
+     (fact/dimension tables, bridge table, idempotent upserts), and analytical
+     SQL including window functions for skill-demand trends
+   Power BI dashboards surfacing skill demand by role, German-language
+     requirement frequency by company, and salary disclosure by city
+   Tools: Python, PostgreSQL, SQL, Power BI, pandas, AWS RDS
 
-4. Real-Time Driver Drowsiness Detection
-   Tools: Python, TensorFlow, Keras, OpenCV, NumPy, scikit-learn, Git, Jupyter
-   CNN, 99%+ accuracy, 2-second alert, applicable to ADAS automotive safety
+3. Job Application Email Classification - Duplicate & Intent Detection
+   github.com/Yassu-24/JobApplicationTracking-using-DL
+   Staged NLP pipeline: CNN coarse filter (95.3% accuracy) feeding a
+     fine-tuned XLM-RoBERTa classifier (98.75% accuracy, F1 = 0.98) across
+     4 intent categories
+   Tools: Python, PyTorch, Hugging Face Transformers, Gmail API, scikit-learn
 
-5. Aspect-Based Sentiment Analysis (Hindi)
-   Tools: Python, BERT, DistilBERT, spaCy, Hugging Face, CRF, Git, Jupyter
-   F1 improved by 6 points over HMM-Viterbi baseline
+EDUCATION:
+M.Sc. Artificial Intelligence, BTU Cottbus (April 2025 - Present),
+  expected graduation 2027
+B.Tech Computer Science and Engineering, Amrita School of Computing,
+  Coimbatore (2020 - 2024), CGPA 7.2/10
+
+PUBLICATION:
+Bilingual Speech Translation Between Tamil and Telugu with Elimination of
+Dependency on Any Intermediate Languages (AIST-2024, Springer, Nov 2024)
+DOI: 10.1007/978-3-031-91331-0_8
 
 LANGUAGES:
 English C1, German A2 (B1 course ongoing), Telugu Native, Tamil Professional

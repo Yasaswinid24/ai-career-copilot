@@ -7,3 +7,6 @@ outreach_drafts.txt
 thesis_roles.csv
 src/__pycache__/
 *.pyc
+all_code.txt
+*- Copy.csv
+*.pbix

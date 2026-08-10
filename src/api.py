@@ -61,21 +61,21 @@ TRACKER_COLS = [
 
 
 def load_resume():
-    with open(RESUME_FILE) as f:
+    with open(RESUME_FILE, encoding="utf-8") as f:
         return f.read()
 
 
 def load_tracker():
     try:
-        return pd.read_csv(TRACKER_FILE)
+        return pd.read_csv(TRACKER_FILE, encoding="utf-8")
     except FileNotFoundError:
         df = pd.DataFrame(columns=TRACKER_COLS)
-        df.to_csv(TRACKER_FILE, index=False)
+        df.to_csv(TRACKER_FILE, index=False, encoding="utf-8")
         return df
 
 
 def save_tracker(df):
-    df.to_csv(TRACKER_FILE, index=False)
+    df.to_csv(TRACKER_FILE, index=False, encoding="utf-8")
 
 
 # ── Models ────────────────────────────────────────────────────────────────────
@@ -121,27 +121,32 @@ def get_jobs(request: Request):
             row = c.fetchone()
             conn.close()
             if row:
-                user_id = row[0]
-                scores = get_user_scores(user_id)
+                scores = get_user_scores(row[0])
                 if scores:
                     return scores
 
-        # Fall back: try matched_jobs.csv first, then raw jobs.csv
-        for fname in ["matched_jobs.csv", "jobs.csv"]:
+        # Fall back in order of usefulness:
+        #   matched_jobs.csv   scored
+        #   jobs_eligible.csv  filtered but unscored
+        #   jobs.csv           everything, including off-domain and senior
+        for fname in ["matched_jobs.csv", "jobs_eligible.csv", "jobs.csv"]:
             try:
-                df = pd.read_csv(fname)
-                if fname == "matched_jobs.csv":
-                    df = df[~df["verdict"].isin(["Error","API Error"])]
-                    df = df.sort_values(["priority","match_score"], ascending=[True,False])
-                else:
-                    # Raw jobs.csv — no scores yet, sort by freshness
-                    df = df.sort_values(["priority","age_days"], ascending=[True,True])                            if "age_days" in df.columns else df
-                    df["match_score"] = df.get("match_score", 0)
-                    df["verdict"]     = df.get("verdict", "Unscored")
-                    df["reason"]      = df.get("reason", "Not yet scored — run full pipeline")
-                return df.fillna("").to_dict(orient="records")
+                df = pd.read_csv(fname, encoding="utf-8")
             except FileNotFoundError:
                 continue
+            if "verdict" in df.columns:
+                df = df[~df["verdict"].isin(["Error", "API Error"])]
+                df = df.sort_values(["priority", "match_score"],
+                                    ascending=[True, False])
+            else:
+                # Not yet scored — newest first.
+                if "published" in df.columns:
+                    df = df.sort_values(["priority", "published"],
+                                        ascending=[True, False])
+                df["match_score"] = 0
+                df["verdict"]     = "Unscored"
+                df["reason"]      = "Not yet scored — run full pipeline"
+            return df.fillna("").to_dict(orient="records")
 
         return []
     except Exception as e:
@@ -169,6 +174,9 @@ STRICT RULES:
 3. Do NOT add German requirements unless the JD explicitly mentions German
 4. Do NOT add experience years unless the JD explicitly states them
 5. Every item in critical_missing MUST be a word/phrase found in the JD text
+6. ATOMIC ITEMS ONLY: 1-4 words each. Never copy a whole requirement
+   sentence. "Gute Kenntnisse in SQL, Power BI und Power Platform" is THREE
+   items, and each must be checked against the CV separately.
 
 CANDIDATE CV:
 {resume}
@@ -210,7 +218,26 @@ Respond ONLY with valid JSON:
         )
         raw = r.choices[0].message.content.strip()
         raw = raw.replace("```json","").replace("```","").strip()
-        return json.loads(raw)
+        result = json.loads(raw)
+
+        # Same deterministic guard as rag_matcher: the model repeatedly
+        # reports skills as missing that are present in the CV. Whether a
+        # string occurs in a document is not a judgement call.
+        import re as _re
+        cv_norm = _re.sub(r"[^a-z0-9+#]", "", resume.lower())
+        still_missing, recovered = [], []
+        for item in result.get("critical_missing") or []:
+            key = _re.sub(r"[^a-z0-9+#]", "", str(item).lower())
+            if len(key) >= 3 and key in cv_norm:
+                recovered.append(item)
+            else:
+                still_missing.append(item)
+        if recovered:
+            result["critical_missing"] = still_missing
+            found = result.get("found_keywords") or []
+            result["found_keywords"] = found + [r for r in recovered
+                                                if r not in found]
+        return result
     except Exception as e:
         return {"error": str(e)}
 
@@ -244,8 +271,8 @@ Rules:
 - Start with: {greeting},
 - Max 150 words
 - Mention role and company by name
-- Reference 1-2 specific projects with real numbers from CV
-- Mention available 20hrs/week as Werkstudent in Cottbus
+- Reference 1-2 specific projects with real numbers from the CV above
+- State availability and location as given in the CV — do not invent them
 - End with clear call to action
 - Sound human not robotic
 
@@ -333,16 +360,8 @@ def get_followups():
             (pd.to_datetime(df["follow_up_date"]).dt.date <= today)
         ]
         return due.fillna("").to_dict(orient="records")
-    except:
+    except Exception:
         return []
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# PASTE THESE ROUTES INTO src/api.py
-# Add them BEFORE the final "Serve dashboard" section at the bottom of api.py
-# ─────────────────────────────────────────────────────────────────────────────
-# Also add this import at the TOP of api.py with the other imports:
-#   from src.cover_letter import generate_cover_letter, save_draft as save_cl_draft
 
 
 # ── Cover Letter ──────────────────────────────────────────────────────────────
@@ -526,19 +545,23 @@ Format as JSON array:
 [{"question": "...", "answer": "..."}]
 Output valid JSON only.""",
 
-        "german": """Provide guidance for a non-native German speaker (A2 level, English C1)
-interviewing for a Werkstudent ML role at a German company.
+        "german": f"""Provide guidance for a candidate interviewing for a Werkstudent ML
+role at a German company. Take the candidate's actual language levels from
+the CV below — do not assume them.
+
+CANDIDATE CV:
+{resume}
 
 Cover:
 1. How to address the German language level question professionally
-2. How to discuss Werkstudent availability (20 hrs/week)
+2. How to discuss Werkstudent availability
 3. How to handle visa/residence permit questions
-4. German salary expectations for ML Werkstudent (range + how to discuss)
-5. Key cultural differences in German interviews vs Indian/international norms
-6. 3 sample German phrases to use even at A2 level to show effort
+4. German salary expectations for an ML Werkstudent (range + how to discuss)
+5. Key cultural differences in German interviews vs international norms
+6. 3 sample German phrases that show effort at the candidate's stated level
 
 Format as JSON:
-{"topics": [{"title": "...", "advice": "...", "example": "..."}]}
+{{"topics": [{{"title": "...", "advice": "...", "example": "..."}}]}}
 Output valid JSON only.""",
 
         "takehome": """Describe the 5 most common ML take-home assignment types at German tech companies.
@@ -580,12 +603,15 @@ class FollowUpRequest(BaseModel):
 def generate_followup_email(req: FollowUpRequest):
     """Generate a polite follow-up email for an application."""
     greeting = f"Dear {req.recruiter_name.split()[0]}" if req.recruiter_name else "Dear Hiring Team"
+    resume = load_resume()
     prompt = f"""Write a short, polite follow-up email for a job application.
 
 Role: {req.title}
 Company: {req.company}
 Applied on: {req.date_applied}
-Candidate: Yasaswini Dharmavarapu, M.Sc. AI student at BTU Cottbus
+
+CANDIDATE CV (use the name and details from here — do not invent any):
+{resume[:800]}
 
 Rules:
 - Start with: {greeting},
@@ -620,6 +646,7 @@ Output only the subject line."""
     except Exception as e:
         return {"error": str(e)}
 
+
 # ── Serve dashboard ───────────────────────────────────────────────────────────
 from fastapi.responses import FileResponse
 
@@ -630,6 +657,7 @@ def serve_root():
 @app.get("/dashboard.html")
 def serve_dashboard():
     return FileResponse("dashboard.html")
+
 
 @app.post("/api/cv")
 async def upload_cv(req: dict, request: Request):
@@ -655,7 +683,7 @@ from fastapi import UploadFile, File
 from src.google_auth import save_user_scores
 
 @app.post("/api/cv/upload")
-async def upload_cv(request: Request, cv_text: str = ""):
+async def upload_cv_text(request: Request, cv_text: str = ""):  # renamed: was duplicate
     """Save user's CV text and trigger per-user scoring."""
     token = request.cookies.get("session_token")
     if not token:
@@ -679,7 +707,7 @@ async def upload_cv(request: Request, cv_text: str = ""):
 
 @app.post("/api/cv/score")
 async def score_cv_for_user(request: Request):
-    """Score all current jobs against the user's uploaded CV using RAG."""
+    """Score all current jobs against the user's uploaded CV."""
     import sys, os
     sys.path.append(os.path.dirname(__file__))
 
@@ -701,14 +729,21 @@ async def score_cv_for_user(request: Request):
     cv_text = row[1]
 
     try:
-        from src.rag_matcher import run_rag_matching
-        import tempfile, pandas as pd
+        # rag_matcher v3 renamed run_rag_matching -> run_matching when the
+        # FAISS retrieval was removed. Importing the old name raises
+        # ImportError and the Score My CV button fails silently.
+        from src.rag_matcher import run_matching
+        import tempfile
 
-        # Run RAG matching with user's CV
         with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
             tmp_output = f.name
 
-        result_df = run_rag_matching(cv_text, "jobs.csv", tmp_output)
+        # Score the filtered list, not every posting — jobs.csv now holds
+        # off-domain and senior roles too, since the eligibility checker
+        # annotates instead of deleting.
+        jobs_file = ("jobs_eligible.csv" if os.path.exists("jobs_eligible.csv")
+                     else "jobs.csv")
+        result_df = run_matching(cv_text, jobs_file, tmp_output)
 
         if result_df is not None:
             scores = result_df.fillna("").to_dict(orient="records")
@@ -723,6 +758,7 @@ async def score_cv_for_user(request: Request):
         return {"error": "Scoring failed"}
     except Exception as e:
         return {"error": str(e)}
+
 
 # ── Pipeline triggers ─────────────────────────────────────────────────────────
 
@@ -744,7 +780,7 @@ FULL_STEPS = [
     ("src/scraper.py",             "Scraping jobs from Arbeitsagentur…"),
     ("src/freshness_check.py",     "Removing stale jobs (>14 days)…"),
     ("src/eligibility_checker.py", "Filtering ineligible roles…"),
-    ("src/rag_matcher.py",         "RAG scoring jobs against your CV…"),
+    ("src/rag_matcher.py",         "Scoring jobs against your CV…"),
 ]
 
 def run_pipeline_bg(pipeline_key: str, steps: list):
@@ -760,7 +796,9 @@ def run_pipeline_bg(pipeline_key: str, steps: list):
             for script, label in steps:
                 state["step"] = label
                 result = subprocess.run(
-                    ["python3", script],
+                    # sys.executable, not "python3": that name does not exist
+                    # on Windows, so local runs failed while Render worked.
+                    [sys.executable, script],
                     capture_output=True, text=True,
                     cwd=os.path.dirname(os.path.abspath(__file__)) + "/.."
                 )

@@ -4,7 +4,7 @@ AI Career Copilot — Daily Runner
 import os, sys, subprocess, socket, pandas as pd
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 
 def header(text):
     print(f"\n{'='*55}\n  {text}\n{'='*55}")
@@ -18,7 +18,7 @@ def check_keys():
 def check_freshness():
     try:
         df = pd.read_csv("jobs.csv")
-        latest = pd.to_datetime(df["scraped_at"]).max()
+        latest = pd.to_datetime(df["scraped_at"], errors="coerce").dropna().max()
         age = datetime.now() - latest
         print(f"\n  Last scraped: {latest.strftime('%Y-%m-%d %H:%M')}")
         print(f"  Data age:     {age.days}d {age.seconds//3600}h")
